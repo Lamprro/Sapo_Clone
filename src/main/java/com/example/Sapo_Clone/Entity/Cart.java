@@ -1,47 +1,53 @@
 package com.example.Sapo_Clone.Entity;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Table(name = "cart")
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class Cart {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     int id;
 
+    @Column(name = "created_at")
+    LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    LocalDateTime updatedAt;
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToOne
     @JoinColumn(name = "user_id")
     User user;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_date")
-    Date createdDate;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "updated_date")
-    Date updatedDate;
-
-    @OneToMany(mappedBy = "cart")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     List<CartItem> cartItems;
 
     @PrePersist
-    protected void onCreate() {
-        createdDate = new Date();
+    public void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
-    protected void onUpdate(){
-        updatedDate = new Date();
+    public void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

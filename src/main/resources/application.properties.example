@@ -1,0 +1,35 @@
+# Example application.properties (do NOT commit real secrets)
+
+spring.application.name=Sapo_Clone
+
+# DATABASE SQL Server (example values)
+spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=Sapo_Clone;encrypt=false
+spring.datasource.username=sa
+spring.datasource.password=your_db_password_here
+
+# JPA / Hibernate
+# Use 'update' for development; use 'validate' or none for production
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.SQLServerDialect
+
+# JWT (provide a Base64-encoded 256-bit secret in environment)
+jwt.secret=your_base64_jwt_secret_here
+jwt.expiration=86400000
+
+# Cloudinary
+cloudinary.cloud_name=your_cloud_name
+cloudinary.api_key=your_api_key
+cloudinary.api_secret=your_api_secret
+
+# Logging
+logging.level.com.example.Sapo_Clone=DEBUG
+logging.level.org.springframework.security=INFO
+
+# Allowed origins for CORS (comma-separated)
+app.security.allowed-origins=http://localhost:3000,http://localhost:5173
+
+# Auto run data.sql when setup
+spring.sql.init.mode=always
+spring.jpa.defer-datasource-initialization=true

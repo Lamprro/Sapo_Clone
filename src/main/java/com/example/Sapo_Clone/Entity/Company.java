@@ -1,28 +1,68 @@
 package com.example.Sapo_Clone.Entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
+@Table(name = "company")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class Company {
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     int id;
 
-    @Column (name = "company_name")
+    @Column (name = "company_name", columnDefinition = "NVARCHAR(255)")
     String companyName;
 
+    @Column (name = "company_address", columnDefinition = "NVARCHAR(255)")
+    String companyAddress;
+
+    @Column(name = "created_at")
+    LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    LocalDateTime updatedAt;
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(mappedBy = "company")
-    List<Store> storeList;
+    List<Store> stores;
 
-     @OneToMany(mappedBy = "company")
-     List<User> userList;
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @OneToMany(mappedBy = "company")
+    List<User> users;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @OneToMany(mappedBy = "company")
+    List<Product> products;
+
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @OneToMany(mappedBy = "company")
+    List<Promotion> promotions;
+
+    @PrePersist
+    public void onCreate(){
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    public void onUpdate(){
+        updatedAt = LocalDateTime.now();
+    }
 }

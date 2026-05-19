@@ -4,13 +4,17 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "product")
+@Table(name = "product", uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "barcode", "company_id" }),
+})
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -20,85 +24,97 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     int id;
 
-    @Column(name = "product_name")
+    @Column(name = "product_name", nullable = false, columnDefinition = "NVARCHAR(255)")
     String productName;
 
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
     String description;
 
-    @Column(name = "barcode")
+    @Column(name = "barcode", nullable = false, columnDefinition = "NVARCHAR(255)")
     String barcode;
 
     @Column(name = "avgstar")
-    String avgstar;
+    Double avgstar = 0.0;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_date")
-    Date createdDate;
+    @Column(name = "created_at", updatable = false)
+    LocalDateTime createdAt;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "updated_date")
-    Date updatedDate;
+    @Column(name = "updated_at")
+    LocalDateTime updatedAt;
 
-    @Column(name = "import_price")
-    Double importPrice;
+    @Column(name = "import_price", nullable = false)
+    Double importPrice = 0.0;
 
-    @Column(name = "sell_price_orginal")
-    Double sellPriceOrginal;
+    @Column(name = "sell_price_original", nullable = false)
+    Double sellPriceOriginal = 0.0;
 
-    @Column(name = "sell_price")
-    Double sellPrice;
+    @Column(name = "sell_price", nullable = false)
+    Double sellPrice = 0.0;
 
-    @Column(name = "quantity")
-    int quantity;
-
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne
-    @JoinColumn(name = "store_id")
-    Store store;
+    @JoinColumn(name = "company_id", nullable = false)
+    Company company;
 
-    @Column(name = "status")
-    int status;
+    @Column(name = "status", nullable = false)
+    int status = 1;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToMany
-    @JoinTable(
-            name = "product_categorie",
-            joinColumns = @JoinColumn(name = "product_id"),
-            inverseJoinColumns = @JoinColumn(name = "categorie_id")
-    )
-    List<Categorie> categorieList;
+    @JoinTable(name = "product_category", joinColumns = @JoinColumn(name = "product_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))
+    List<Category> categoryList;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne
-    @JoinColumn(name = "unit_id")
+    @JoinColumn(name = "unit_id", nullable = false)
     Unit unit;
 
-    @OneToMany(mappedBy = "product")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     List<ProductImage> productImages;
 
-    @OneToMany(mappedBy = "product")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     List<Rating> ratingList;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(mappedBy = "product")
     List<CartItem> cartItems;
 
-    @OneToMany(mappedBy = "product")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     List<Inventory> inventories;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(mappedBy = "product")
     List<OrderDetail> orderDetails;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(mappedBy = "product")
     List<PurchaseOrderDetail> purchaseOrderDetails;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToMany(mappedBy = "products")
     List<Promotion> promotions;
 
     @PrePersist
     protected void onCreate() {
-        createdDate = new Date();
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedDate = new Date();
+        updatedAt = LocalDateTime.now();
     }
 }

@@ -9,15 +9,18 @@ import lombok.experimental.FieldDefaults;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class Point {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     int id;
 
     @Column (name = "point")
-    int point;
+    int point = 0;
 
-    @OneToOne(mappedBy = "point")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @OneToOne
+    @JoinColumn(name = "user_id")
     User user;
 }
