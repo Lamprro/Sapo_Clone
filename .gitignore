@@ -1,5 +1,4 @@
-# -------------------------------------------------------------
-# Build output (Maven)
+HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -13,11 +12,7 @@ target/
 *.iml
 *.ipr
 
-### VS Code ###
-.vscode/
-
-# -------------------------------------------------------------
-# NetBeans / Gradle
+### NetBeans ###
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -27,13 +22,5 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-# Secrets & environment variables
-# Đừng commit các file chứa key/secret thực tế.
-.env                    # chứa DB_PASSWORD, JWT_SECRET, CLOUDINARY_*, API_GOONG_KEY, …
-# Chỉ ignore các file cấu hình local/nhạy cảm nếu có (ví dụ: application-local.properties)
-# application-local.properties
-
-# -------------------------------------------------------------
-# Các file tạm thời / logs
-*.log
-*.tmp
+### VS Code ###
+.vscode/
