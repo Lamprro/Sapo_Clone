@@ -7,7 +7,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
 public class WebClientConfig {
-    @Value("${map.api.base-url:https://rsapi.goong.io}")
+    @Value("${goong.api.base-url:https://rsapi.goong.io}")
     private String baseUrl;
 
     @Bean

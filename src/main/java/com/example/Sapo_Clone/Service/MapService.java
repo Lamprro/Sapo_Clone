@@ -14,7 +14,7 @@ public class MapService {
     @Autowired
     private WebClient goongWebClient;
 
-    @Value("${map.api.key}")
+    @Value("${goong.api.key}")
     private String apiKey;
 
     public Coordinates getCoordinatesFromAddress(String address) {
