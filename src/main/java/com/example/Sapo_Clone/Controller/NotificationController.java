@@ -28,11 +28,12 @@ public class NotificationController {
         
         int userId = SecurityUtils.getCurrentUserId();
         String role = SecurityUtils.getCurrentRole();
+        int companyId = SecurityUtils.getCurrentCompanyId();
         
-        log.info("Fetching notifications for userId={}, role={}", userId, role);
+        log.info("Fetching notifications for userId={}, role={}, companyId={}", userId, role, companyId);
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Notification> notifications = notificationService.getNotificationsForUser(userId, role, pageable);
+        Page<Notification> notifications = notificationService.getNotificationsForUser(userId, role, companyId, pageable);
         
         return ResponseEntity.ok(ApiResponse.success("Success", notifications));
     }
@@ -55,6 +56,7 @@ public class NotificationController {
                 .message(message)
                 .type(com.example.Sapo_Clone.Enum.NotificationType.ADMIN_ALERT)
                 .targetRole(targetRole != null ? targetRole : "ADMIN")
+                .companyId(SecurityUtils.getCurrentCompanyId())
                 .build();
         
         Notification saved = notificationService.createNotification(notification);

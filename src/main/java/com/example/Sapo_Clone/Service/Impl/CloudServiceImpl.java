@@ -23,6 +23,8 @@ public class CloudServiceImpl implements CloudService {
 
     private final Cloudinary cloudinary;
 
+    private final ProductServiceImpl productService;
+
     @Override
     @Async("imageUploadExecutor")
     public CompletableFuture<CloudResponse> uploadToCloudAsync(byte[] fileBytes, String originalFilename) {
@@ -58,6 +60,7 @@ public class CloudServiceImpl implements CloudService {
             String publicId = uploadResult.get("public_id").toString();
 
             log.info("Upload successful. Public ID: {}", publicId);
+            productService.clearProductListCaches();
             return new CloudResponse(imageUrl, publicId);
 
         } catch (IOException e) {

@@ -28,19 +28,21 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, In
 
     @Query("SELECT SUM(p.totalAmount) FROM PurchaseOrder p " +
            "WHERE p.store.company.id = :companyId " +
-           "AND p.store.id = :storeId " +
+           "AND (:storeId IS NULL OR p.store.id = :storeId) " +
+           "AND p.status = 1 " + // 1 = COMPLETED
            "AND p.createdAt BETWEEN :start AND :end")
     Double sumTotalAmountByStoreAndDate(@Param("companyId") int companyId,
-                                       @Param("storeId") int storeId, 
+                                       @Param("storeId") Integer storeId, 
                                        @Param("start") LocalDateTime start, 
                                        @Param("end") LocalDateTime end);
 
     @Query("SELECT COUNT(p) FROM PurchaseOrder p " +
            "WHERE p.store.company.id = :companyId " +
-           "AND p.store.id = :storeId " +
+           "AND (:storeId IS NULL OR p.store.id = :storeId) " +
+           "AND p.status = 1 " + // 1 = COMPLETED
            "AND p.createdAt BETWEEN :start AND :end")
     Long countOrdersByStoreAndDate(@Param("companyId") int companyId,
-                                  @Param("storeId") int storeId, 
+                                  @Param("storeId") Integer storeId, 
                                   @Param("start") LocalDateTime start, 
                                   @Param("end") LocalDateTime end);
 }

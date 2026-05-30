@@ -13,7 +13,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 public interface UserService extends UserDetailsService {
 
-    User findByUserName(String username);
+    User findByUserNameAndCompanyId(String username, int companyId);
 
     @Override
     UserDetails loadUserByUsername(String username) throws UsernameNotFoundException;

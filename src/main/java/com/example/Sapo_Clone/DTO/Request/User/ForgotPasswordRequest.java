@@ -26,4 +26,5 @@ public class ForgotPasswordRequest {
     @NotBlank(message = "Confirm password is required")
     String confirmPassword;
 
+    int companyId;
 }

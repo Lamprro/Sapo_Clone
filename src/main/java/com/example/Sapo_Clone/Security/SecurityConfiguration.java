@@ -73,36 +73,58 @@ public class SecurityConfiguration {
 
         // 3. Authorization rules
         http.authorizeHttpRequests(auth -> auth
-                // Public: login and signup — no token required
+                // Public: login, signup, websockets
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/ws/**").permitAll() // WebSocket endpoint
-                .requestMatchers(("/api/**")).permitAll()
-//                .requestMatchers("/api/auth/**").permitAll()
-//                .requestMatchers(HttpMethod.GET,"/api/company").permitAll()
-//
-//                // User management
-//                .requestMatchers(HttpMethod.PUT, "/api/user/profile").authenticated()
-//                .requestMatchers(HttpMethod.PATCH, "/api/user/password").authenticated()
-//                .requestMatchers(HttpMethod.POST, "/api/user").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
-//                .requestMatchers(HttpMethod.GET, "/api/user").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
-//                .requestMatchers(HttpMethod.PATCH, "/api/user/*").hasAnyRole("ADMIN", "MANAGER")
-//
-//                // Order management
-//                .requestMatchers(HttpMethod.POST, "/api/order").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE", "CUSTOMER")
-//                .requestMatchers(HttpMethod.GET, "/api/order/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE", "CUSTOMER")
-//                .requestMatchers(HttpMethod.PUT, "/api/order/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
-//                .requestMatchers(HttpMethod.PATCH, "/api/order/*/status").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE","CUSTOMER")
-//                .requestMatchers(HttpMethod.PATCH, "/api/order/*/payment").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
-//
-//                // Purchase order management
-//                .requestMatchers("/api/purchase_order/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
-//
-//                // Rating moderation
-//                .requestMatchers(HttpMethod.PATCH, "/api/rating/*/status").hasAnyRole("ADMIN", "MANAGER")
-//                .requestMatchers(HttpMethod.DELETE, "/api/rating/*").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE","CUSTOMER")
+                .requestMatchers("/ws/**").permitAll()
+                
+                // Public GET endpoints for registration/lookup
+                .requestMatchers(HttpMethod.GET, "/api/company").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/company/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/category/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/unit/**").permitAll()
 
-                // Everything else requires a valid JWT. Specific role checks are handled via
-                // @PreAuthorize in controllers.
+                // User management
+                .requestMatchers(HttpMethod.PUT, "/api/user/profile").authenticated()
+                .requestMatchers(HttpMethod.PATCH, "/api/user/password").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/user/**").hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.GET, "/api/user/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+                .requestMatchers(HttpMethod.PATCH, "/api/user/**").hasAnyRole("ADMIN", "MANAGER")
+
+                // Company management
+                .requestMatchers(HttpMethod.POST, "/api/company/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/company/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/company/**").hasRole("ADMIN")
+
+                // Store management
+                .requestMatchers(HttpMethod.GET, "/api/store/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/store/**").hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.PUT, "/api/store/**").hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.DELETE, "/api/store/**").hasAnyRole("ADMIN", "MANAGER")
+
+                // Product management
+                .requestMatchers(HttpMethod.GET, "/api/product/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/product/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+                .requestMatchers(HttpMethod.PUT, "/api/product/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+                .requestMatchers(HttpMethod.DELETE, "/api/product/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+                .requestMatchers(HttpMethod.POST, "/api/product_image/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+
+                // Order management
+                .requestMatchers(HttpMethod.POST, "/api/order/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE", "CUSTOMER")
+                .requestMatchers(HttpMethod.GET, "/api/order/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE", "CUSTOMER")
+                .requestMatchers(HttpMethod.PUT, "/api/order/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+                .requestMatchers(HttpMethod.PATCH, "/api/order/*/status").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE", "CUSTOMER")
+                .requestMatchers(HttpMethod.PATCH, "/api/order/*/payment").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+
+                // Purchase order, provider & inventory management
+                .requestMatchers("/api/purchase_order/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+                .requestMatchers("/api/provider/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+                .requestMatchers("/api/inventory/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+
+                // Rating moderation
+                .requestMatchers(HttpMethod.PATCH, "/api/rating/*/status").hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.DELETE, "/api/rating/*").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE", "CUSTOMER")
+
+                // All other endpoints require authentication
                 .anyRequest().authenticated());
 
         // 4. Stateless session — no HttpSession

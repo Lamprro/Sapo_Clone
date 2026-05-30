@@ -33,6 +33,9 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public StoreResponse createStore(StoreDTO dto) {
         int companyId = SecurityUtils.getCurrentCompanyId();
+        if ("ADMIN".equals(SecurityUtils.getCurrentRole()) && dto.getCompanyId() != null) {
+            companyId = dto.getCompanyId();
+        }
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
 
@@ -66,7 +69,12 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public List<StoreResponse> getAllStoresForCustomer() {
         int companyId = SecurityUtils.getCurrentCompanyId();
-        List<Store> stores = storeRepository.findByCompanyId(companyId);
+        List<Store> stores;
+        if ("ADMIN".equals(SecurityUtils.getCurrentRole())) {
+            stores = storeRepository.findAll();
+        } else {
+            stores = storeRepository.findByCompanyId(companyId);
+        }
         return stores.stream().map(StoreResponse::fromEntity).collect(Collectors.toList());
     }
 
@@ -87,12 +95,18 @@ public class StoreServiceImpl implements StoreService {
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
 
-        if (store.getCompany() == null || store.getCompany().getId() != companyId) {
+        if (!"ADMIN".equals(SecurityUtils.getCurrentRole()) && (store.getCompany() == null || store.getCompany().getId() != companyId)) {
             throw new AppException(ErrorCode.STORE_NOT_FOUND);
         }
 
         store.setStoreName(dto.getStoreName());
         store.setStoreAddress(dto.getStoreAddress());
+        
+        if ("ADMIN".equals(SecurityUtils.getCurrentRole()) && dto.getCompanyId() != null) {
+            Company company = companyRepository.findById(dto.getCompanyId())
+                    .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
+            store.setCompany(company);
+        }
 
         // Fetch coordinates from Goong API if not provided
         if (dto.getLatitude() == null || dto.getLongitude() == null) {

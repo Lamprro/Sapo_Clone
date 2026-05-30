@@ -284,7 +284,7 @@ public class ProductServiceImpl implements ProductService {
                 .build();
     }
 
-    private void clearProductListCaches() {
+    protected void clearProductListCaches() {
         try {
             if (cacheManager.getCache("product:list:manage") != null) cacheManager.getCache("product:list:manage").clear();
             if (cacheManager.getCache("product:list:customer") != null) cacheManager.getCache("product:list:customer").clear();

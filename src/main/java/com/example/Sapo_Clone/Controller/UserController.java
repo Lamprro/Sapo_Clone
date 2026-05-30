@@ -77,6 +77,6 @@ public class UserController {
             @Valid @RequestBody com.example.Sapo_Clone.DTO.Request.User.ForgotPasswordRequest forgotPasswordRequest) {
         log.info("PATCH /api/user/forgot-password - email={}", forgotPasswordRequest.getEmail());
         userService.forgotPassword(forgotPasswordRequest);
-        return ResponseEntity.ok(ApiResponse.success("If the email exists, a password reset link has been sent", null));
+        return ResponseEntity.ok(ApiResponse.success("A password reset verification code has been sent to your email.", null));
     }
 }

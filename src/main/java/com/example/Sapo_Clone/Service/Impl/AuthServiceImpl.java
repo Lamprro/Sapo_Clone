@@ -109,15 +109,15 @@ public class AuthServiceImpl implements AuthService {
         // Delegate to UserService.createUser() — reuses all duplicate checks + BCrypt
         // encode
         UserCreateDTO createDTO = new UserCreateDTO();
+        createDTO.setCompanyId(dto.getCompanyId());
+        createDTO.setAddress(dto.getAddress());
+        createDTO.setStoreId(dto.getStoreId());
+        createDTO.setRoleId(dto.getRoleId());
         createDTO.setFullName(dto.getFullName());
         createDTO.setPhone(dto.getPhone());
         createDTO.setEmail(dto.getEmail());
         createDTO.setUsername(dto.getUsername());
         createDTO.setPassword(dto.getPassword());
-        createDTO.setCompanyId(dto.getCompanyId());
-        createDTO.setAddress(dto.getAddress());
-        createDTO.setStoreId(dto.getStoreId());
-        createDTO.setRoleId(dto.getRoleId());
         UserResponse response = userService.createUser(createDTO);
         
         return response;

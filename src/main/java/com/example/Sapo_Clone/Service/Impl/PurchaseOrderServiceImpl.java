@@ -8,6 +8,8 @@ import com.example.Sapo_Clone.Exception.AppException;
 import com.example.Sapo_Clone.Exception.ErrorCode;
 import com.example.Sapo_Clone.Repository.*;
 import com.example.Sapo_Clone.Service.InventoryService;
+import com.example.Sapo_Clone.Service.NotificationService;
+import com.example.Sapo_Clone.Enum.NotificationType;
 import com.example.Sapo_Clone.Service.PurchaseOrderService;
 import com.example.Sapo_Clone.Utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +42,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private final ProviderRepository providerRepository;
     private final UserRepository userRepository;
     private final InventoryService inventoryService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -206,9 +209,32 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             }
         } else if (oldStatus == STATUS_COMPLETED && newStatus == STATUS_CANCELLED) {
             // Transition from Completed to Cancelled -> Decrease Stock (Restoration)
-            for (PurchaseOrderDetail detail : po.getPurchaseOrderDetails()) {
-                inventoryService.decreaseStock(detail.getProduct().getId(), po.getStore().getId(),
-                        detail.getQuantity());
+            try {
+                for (PurchaseOrderDetail detail : po.getPurchaseOrderDetails()) {
+                    inventoryService.decreaseStock(detail.getProduct().getId(), po.getStore().getId(),
+                            detail.getQuantity());
+                }
+            } catch (AppException e) {
+                if (e.getErrorCode() == ErrorCode.INSUFFICIENT_STOCK || e.getErrorCode() == ErrorCode.OUT_OF_STOCK) {
+                    try {
+                        int userId = SecurityUtils.getCurrentUserId();
+                        String productsNames = po.getPurchaseOrderDetails().stream()
+                                .map(d -> d.getProduct().getProductName())
+                                .collect(Collectors.joining(", "));
+                        Notification notif = Notification.builder()
+                                .title("Stock Deduction Failed")
+                                .message("Failed to cancel Purchase Order #" + purchaseOrderId + " because stock of product '" 
+                                        + productsNames + "' would become negative in store '" + po.getStore().getStoreName() + "'.")
+                                .type(NotificationType.INVENTORY_LOW)
+                                .targetUserId(userId)
+                                .companyId(companyId)
+                                .build();
+                        notificationService.createNotification(notif);
+                    } catch (Exception ex) {
+                        log.error("Failed to send stock deduction error notification", ex);
+                    }
+                }
+                throw e;
             }
         }
 
@@ -218,14 +244,23 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
     @Override
     public PurchaseReportResponse getPurchaseReport(int storeId, LocalDateTime start, LocalDateTime end) {
-        if (storeId == -1 || storeId == 0) {
-            storeId = SecurityUtils.getCurrentStoreId();
+        Integer targetStoreId = null;
+        if (storeId == -2) {
+            // -2 represents the entire company!
+        } else if (storeId == -1 || storeId == 0) {
+            int currentStoreId = SecurityUtils.getCurrentStoreId();
+            if (currentStoreId > 0) {
+                targetStoreId = currentStoreId;
+                storeRepository.findById(targetStoreId)
+                        .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
+            }
+        } else {
+            targetStoreId = storeId;
+            storeRepository.findById(targetStoreId)
+                    .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
         }
-        Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
+
         int companyId = SecurityUtils.getCurrentCompanyId();
-        int currentUserId = SecurityUtils.getCurrentUserId();
-        String currentRole = SecurityUtils.getCurrentRole();
 
         if (start == null) {
             start = LocalDate.now().atStartOfDay();
@@ -234,15 +269,15 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             end = LocalDate.now().plusDays(1).atStartOfDay();
         }
 
-        Double totalExpenditure = purchaseOrderRepository.sumTotalAmountByStoreAndDate(companyId, storeId, start, end);
-        Long totalOrders = purchaseOrderRepository.countOrdersByStoreAndDate(companyId, storeId, start, end);
+        Double totalExpenditure = purchaseOrderRepository.sumTotalAmountByStoreAndDate(companyId, targetStoreId, start, end);
+        Long totalOrders = purchaseOrderRepository.countOrdersByStoreAndDate(companyId, targetStoreId, start, end);
 
-        Page<PurchaseOrder> detailedOrders = purchaseOrderRepository.findByFilters(companyId, storeId, null, null,
+        Page<PurchaseOrder> detailedOrders = purchaseOrderRepository.findByFilters(companyId, targetStoreId, null, null,
                 PageRequest.of(0, 1000));
         LocalDateTime finalEnd = end;
         LocalDateTime finalStart = start;
         List<PurchaseOrderResponse> orderList = detailedOrders.getContent().stream()
-                .filter(o -> o.getCreatedAt().isAfter(finalStart) && o.getCreatedAt().isBefore(finalEnd))
+                .filter(o -> o.getCreatedAt().isAfter(finalStart) && o.getCreatedAt().isBefore(finalEnd) && o.getStatus() == 1)
                 .map(PurchaseOrderResponse::fromEntity)
                 .collect(Collectors.toList());
 

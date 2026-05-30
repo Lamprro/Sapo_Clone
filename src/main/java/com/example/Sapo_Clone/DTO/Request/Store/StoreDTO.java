@@ -13,4 +13,6 @@ public class StoreDTO {
     
     private Double latitude;
     private Double longitude;
+
+    private Integer companyId;
 }

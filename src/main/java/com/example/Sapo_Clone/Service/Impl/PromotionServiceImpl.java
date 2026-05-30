@@ -23,6 +23,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +36,7 @@ public class PromotionServiceImpl implements PromotionService {
     private final PromotionRepository promotionRepository;
     private final ProductRepository productRepository;
     private final CompanyRepository companyRepository;
+    private final ProductServiceImpl productService;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     private Promotion buildPromotionEntity(PromotionCreateDTO dto) {
@@ -87,6 +89,7 @@ public class PromotionServiceImpl implements PromotionService {
                 
                 recalculateProductPrice(product, -1);
                 affectedProducts.add(product);
+
             }
         }
         
@@ -100,7 +103,10 @@ public class PromotionServiceImpl implements PromotionService {
                 .message("Check out our new promotion: " + savedPromotion.getDescription())
                 .type(NotificationType.PROMOTION_CREATED)
                 .targetRole("CUSTOMER")
+                .companyId(companyId)
                 .build());
+
+        productService.clearProductListCaches();
 
         return PromotionResponse.fromEntity(savedPromotion);
     }
@@ -124,6 +130,7 @@ public class PromotionServiceImpl implements PromotionService {
                 .message("Save big on your next order: " + saved.getDescription())
                 .type(NotificationType.PROMOTION_CREATED)
                 .targetRole("CUSTOMER")
+                .companyId(companyId)
                 .build());
 
         return PromotionResponse.fromEntity(saved);
@@ -147,6 +154,8 @@ public class PromotionServiceImpl implements PromotionService {
         promotion.setStatus(status);
         if (status == 0) {
             promotion.setEndedAt(LocalDateTime.now());
+        } else if (status == 1) {
+            promotion.setEndedAt(LocalDate.now().atTime(23, 59, 59));
         }
 
         // Hardening: Intelligently revert or re-apply prices
@@ -161,6 +170,7 @@ public class PromotionServiceImpl implements PromotionService {
         }
 
         Promotion saved = promotionRepository.save(promotion);
+        productService.clearProductListCaches();
         return PromotionResponse.fromEntity(saved);
     }
 
@@ -223,6 +233,7 @@ public class PromotionServiceImpl implements PromotionService {
         }
 
         Promotion saved = promotionRepository.save(promotion);
+        productService.clearProductListCaches();
         return PromotionResponse.fromEntity(saved);
     }
 

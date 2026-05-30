@@ -13,10 +13,10 @@ import java.util.Optional;
 
 @Repository
 public interface StoreRepository extends JpaRepository<Store, Integer> {
-       @Query(value = "SELECT s FROM Store s WHERE s.company.id = :companyId AND (" +
+       @Query(value = "SELECT s FROM Store s WHERE (:companyId = 0 OR s.company.id = :companyId) AND (" +
                      "(:keyword IS NULL OR :keyword = '') OR " +
                      "LOWER(s.storeName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                     "CAST(s.id AS string) LIKE CONCAT('%', :keyword, '%'))", countQuery = "SELECT count(s) FROM Store s WHERE s.company.id = :companyId AND ("
+                     "CAST(s.id AS string) LIKE CONCAT('%', :keyword, '%'))", countQuery = "SELECT count(s) FROM Store s WHERE (:companyId = 0 OR s.company.id = :companyId) AND ("
                                    +
                                    "(:keyword IS NULL OR :keyword = '') OR " +
                                    "LOWER(s.storeName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +

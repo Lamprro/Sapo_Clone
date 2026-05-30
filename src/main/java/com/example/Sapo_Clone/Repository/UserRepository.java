@@ -30,15 +30,15 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     boolean existsByUsername(String username);
 
-    Optional<User> findByUserEmail(String email);
+    Optional<User> findByUserEmailAndCompany_Id(String email, int companyId);
 
     @Query("SELECT u FROM User u WHERE " +
-            "u.company.id = :companyId AND (" +
+            "(:companyId = 0 OR u.company.id = :companyId) AND (" +
             "LOWER(u.userFullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "u.userPhone LIKE CONCAT('%', :keyword, '%') OR " +
             "LOWER(u.userEmail) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<User> searchByKeyword(@Param("companyId") int companyId, @Param("keyword") String keyword, Pageable pageable);
 
-    @Query("SELECT u FROM User u WHERE u.company.id = :companyId")
+    @Query("SELECT u FROM User u WHERE (:companyId = 0 OR u.company.id = :companyId)")
     Page<User> findAllByCompanyId(@Param("companyId") int companyId, Pageable pageable);
 }

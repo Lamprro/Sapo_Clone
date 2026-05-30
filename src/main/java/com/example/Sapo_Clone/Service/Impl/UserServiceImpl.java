@@ -75,12 +75,10 @@ public class UserServiceImpl implements UserService {
                 throw new UsernameNotFoundException("Invalid company ID format in username");
             }
         } else {
-            // Fallback for cases without companyId (if any)
-            User user = userRepository.findByUsername(compositeUsername)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found: " + compositeUsername));
-            SimpleGrantedAuthority authority = new SimpleGrantedAuthority(user.getRoles().getRolesName());
-            return new org.springframework.security.core.userdetails.User(
-                    user.getUsername(), user.getPassword(), List.of(authority));
+            // This block is problematic and should ideally not be used in a multi-tenant system.
+            // It's kept for potential fallback but can cause issues if usernames are not globally unique.
+            // The correct way is to always provide a company context.
+            throw new UsernameNotFoundException("Company ID is required for login. Please use 'username:companyId' format.");
         }
 
         User user = userRepository.findByUsernameAndCompany_Id(username, companyId)
@@ -93,8 +91,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User findByUserName(String username) {
-        return userRepository.findByUsername(username)
+    public User findByUserNameAndCompanyId(String username, int companyId) {
+        return userRepository.findByUsernameAndCompany_Id(username, companyId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
@@ -191,12 +189,8 @@ public class UserServiceImpl implements UserService {
         log.info("User created id={} with role={} under company={}", saved.getId(), targetRoleName, targetCompanyId);
 
         // Send verification email
-        try {
-            log.info("Triggering verification email for email={}", saved.getUserEmail());
-            emailVerificationService.sendVerificationCode(saved.getUserEmail());
-        } catch (Exception e) {
-            log.error("Failed to send verification email during user creation: {}", e.getMessage());
-        }
+        log.info("Triggering verification email for email={} under companyId={}", saved.getUserEmail(), saved.getCompany().getId());
+        emailVerificationService.sendVerificationCode(saved.getUserEmail(), saved.getCompany().getId());
 
         return UserResponse.fromEntity(saved);
     }
@@ -214,7 +208,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        if (user.getCompany() == null || user.getCompany().getId() != companyId) {
+        if (companyId != 0 && (user.getCompany() == null || user.getCompany().getId() != companyId)) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
         }
 
@@ -238,7 +232,7 @@ public class UserServiceImpl implements UserService {
             Optional<User> opt = userRepository.findById(id);
             List<UserResponse> singleResult = new ArrayList<>();
             opt.ifPresent(u -> {
-                if (u.getCompany() != null && u.getCompany().getId() == companyId) {
+                if (u.getCompany() != null && (companyId == 0 || u.getCompany().getId() == companyId)) {
                     singleResult.add(UserResponse.fromEntity(u));
                 }
             });
@@ -296,17 +290,17 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void forgotPassword(ForgotPasswordRequest dto) {
-        User user = userRepository.findByUsername(dto.getUsername())
+        User user = userRepository.findByUsernameAndCompany_Id(dto.getUsername(), dto.getCompanyId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         if (!user.getUserEmail().equals(dto.getEmail())){
-            throw  new AppException(ErrorCode.EMAIL_NOT_MATCH);
+            throw new AppException(ErrorCode.EMAIL_NOT_MATCH);
         }
 
         if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
             throw new AppException(ErrorCode.PASSWORD_MISMATCH);
         }
 
-        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
-        userRepository.save(user);
+        String encodedPassword = passwordEncoder.encode(dto.getNewPassword());
+        emailVerificationService.sendVerificationCode(dto.getEmail(), dto.getCompanyId(), 1, encodedPassword);
     }
 }

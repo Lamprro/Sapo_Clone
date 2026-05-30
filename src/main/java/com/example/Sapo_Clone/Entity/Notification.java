@@ -32,6 +32,8 @@ public class Notification {
 
     private String targetRole; // e.g., CUSTOMER, MANAGER, EMPLOYEE, ADMIN
 
+    private Integer companyId;
+
     private boolean isRead = false;
 
     private LocalDateTime createdAt;

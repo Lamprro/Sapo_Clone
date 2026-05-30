@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.example.Sapo_Clone.Exception.ErrorCode.CATCH;
 
@@ -114,7 +115,7 @@ public class OrderServiceImpl implements OrderService {
                 } else {
                     Integer nearestStoreId = storeRepository.findNearestStoreIdWithStock(
                             item.getProductId(), item.getQuantity(), customerLoc.getLat(), customerLoc.getLng(),
-                            companyId).orElseThrow(() -> new AppException(ErrorCode.OUT_OF_STOCK));
+                            companyId).orElseThrow(() -> new AppException(ErrorCode.OUT_OF_STOCK, "None of stores have enough stock for: " + (productRepository.findById(item.getProductId())).orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND)).getProductName()));
                             
                     storeOrderMap.computeIfAbsent(nearestStoreId, k -> new ArrayList<>()).add(item);
                 }
@@ -186,12 +187,11 @@ public class OrderServiceImpl implements OrderService {
             List<OrderDetail> details = new ArrayList<>();
 
             for (OrderDetailCreateDTO itemDto : itemsForStore) {
-                if (!inventoryService.checkStock(itemDto.getProductId(), currentStoreId, itemDto.getQuantity())) {
-                    throw new AppException(ErrorCode.INSUFFICIENT_STOCK);
-                }
-
                 Product product = productRepository.findById(itemDto.getProductId())
-                        .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+                if (!inventoryService.checkStock(itemDto.getProductId(), currentStoreId, itemDto.getQuantity())) {
+                    throw new AppException(ErrorCode.INSUFFICIENT_STOCK, "Warnning: Not enough stock for: " + product.getProductName());
+                }
 
                 if (isOnlineOrder && cart != null) {
                     cartItemRepository.findByCart_IdAndProduct_Id(cart.getId(), product.getId())
@@ -266,6 +266,7 @@ public class OrderServiceImpl implements OrderService {
                     .message("A new order #" + savedOrder.getId() + " has been placed.")
                     .type(NotificationType.ORDER_NEW)
                     .targetRole("MANAGER") // Broad notification for Managers
+                    .companyId(companyId)
                     .build());
         }
 
@@ -562,6 +563,7 @@ public class OrderServiceImpl implements OrderService {
                     .message("Your order #" + savedOrder.getId() + " status has changed to: " + getStatusName(newStatus))
                     .type(NotificationType.ORDER_STATUS_UPDATE)
                     .targetUserId(savedOrder.getCustomer().getId())
+                    .companyId(companyId)
                     .build());
         }
 
@@ -602,6 +604,7 @@ public class OrderServiceImpl implements OrderService {
                     .message("The payment for your order #" + savedOrder.getId() + " is now: " + getPaymentStatusName(dto.getPaymentStatus()))
                     .type(NotificationType.PAYMENT_STATUS_UPDATE)
                     .targetUserId(savedOrder.getCustomer().getId())
+                    .companyId(companyId)
                     .build());
         }
 
@@ -620,11 +623,22 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Map<String, Object> getFinancialReport(int storeId, LocalDateTime start, LocalDateTime end) {
-        if (storeId == -1 || storeId == 0) {
-            storeId = SecurityUtils.getCurrentStoreId();
+        Integer targetStoreId = null;
+        if (storeId == -2) {
+            // -2 represents the entire company!
+        } else if (storeId == -1 || storeId == 0) {
+            int currentStoreId = SecurityUtils.getCurrentStoreId();
+            if (currentStoreId > 0) {
+                targetStoreId = currentStoreId;
+                storeRepository.findById(targetStoreId)
+                        .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
+            }
+        } else {
+            targetStoreId = storeId;
+            storeRepository.findById(targetStoreId)
+                    .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
         }
-        storeRepository.findById(storeId)
-                .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
+
         int companyId = SecurityUtils.getCurrentCompanyId();
         if (start == null) {
             start = LocalDate.now().atStartOfDay();
@@ -632,8 +646,23 @@ public class OrderServiceImpl implements OrderService {
         if (end == null) {
             end = LocalDate.now().plusDays(1).atStartOfDay();
         }
-        Double revenue = orderRepository.calculateRevenue(companyId, storeId, start, end);
-        Double profit = orderRepository.calculateProfit(companyId, storeId, start, end);
+        Double revenue = orderRepository.calculateRevenue(companyId, targetStoreId, start, end);
+        Double profit = orderRepository.calculateProfit(companyId, targetStoreId, start, end);
+
+        Page<Order> detailedOrders = orderRepository.searchOrders(
+                companyId,
+                null,
+                targetStoreId,
+                4, // 4 = COMPLETED
+                null,
+                PageRequest.of(0, 1000)
+        );
+        LocalDateTime finalEnd = end;
+        LocalDateTime finalStart = start;
+        List<OrderResponse> orderList = detailedOrders.getContent().stream()
+                .filter(o -> o.getCreatedAt().isAfter(finalStart) && o.getCreatedAt().isBefore(finalEnd))
+                .map(OrderResponse::fromEntity)
+                .collect(Collectors.toList());
 
         Map<String, Object> report = new HashMap<>();
         report.put("revenue", revenue != null ? revenue : 0.0);
@@ -642,6 +671,7 @@ public class OrderServiceImpl implements OrderService {
         report.put("endDate", end);
         report.put("companyId", companyId);
         report.put("storeId", storeId);
+        report.put("orders", orderList);
 
         return report;
     }

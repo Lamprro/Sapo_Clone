@@ -52,9 +52,10 @@ public class AuthController {
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<Void>> verifyEmail(
             @RequestParam String email,
-            @RequestParam String code) {
-        log.info("POST /api/auth/verify-email - email={}", email);
-        emailVerificationService.verifyCode(email, code);
+            @RequestParam String code,
+            @RequestParam int companyId) {
+        log.info("POST /api/auth/verify-email - email={} - companyId={}", email, companyId);
+        emailVerificationService.verifyCode(email, code, companyId);
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully. You can now login.", null));
     }
 
@@ -62,9 +63,11 @@ public class AuthController {
     // POST /api/auth/resend-verification — Resend code
     // -------------------------------------------------------------------------
     @PostMapping("/resend-verification")
-    public ResponseEntity<ApiResponse<Void>> resendVerification(@RequestParam String email) {
-        log.info("POST /api/auth/resend-verification - email={}", email);
-        emailVerificationService.sendVerificationCode(email);
+    public ResponseEntity<ApiResponse<Void>> resendVerification(
+            @RequestParam String email,
+            @RequestParam int companyId) {
+        log.info("POST /api/auth/resend-verification - email={} - companyId={}", email, companyId);
+        emailVerificationService.sendVerificationCode(email, companyId);
         return ResponseEntity.ok(ApiResponse.success("Verification code resent successfully.", null));
     }
 

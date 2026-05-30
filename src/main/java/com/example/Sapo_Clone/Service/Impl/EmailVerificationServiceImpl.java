@@ -33,47 +33,66 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
 
     @Override
     @Transactional
-    public CompletableFuture<Void> sendVerificationCode(String email) {
-        User user = userRepository.findByUserEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        if (user.getUserStatus() == 1) {
+    public CompletableFuture<Void> sendVerificationCode(String email, int companyId) {
+        return sendVerificationCode(email, companyId, 0, null);
+    }
+
+    @Override
+    @Transactional
+    public CompletableFuture<Void> sendVerificationCode(String email, int companyId, int purpose, String newPassword) {
+        User user = userRepository.findByUserEmailAndCompany_Id(email, companyId)
+                .orElseThrow(() -> new AppException(ErrorCode.EMAIL_NOT_MATCH));
+
+        if (purpose == 0 && user.getUserStatus() == 1) {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
         }
+
         String code = String.format("%06d", new Random().nextInt(1000000));
         
-        EmailVerification verification = emailVerificationRepository.findByEmail(email)
-                .orElse(EmailVerification.builder().email(email).build());
+        EmailVerification verification = emailVerificationRepository.findByEmailAndCompany_IdAndPurpose(email, companyId, purpose)
+                .orElse(EmailVerification.builder()
+                        .email(email)
+                        .company(user.getCompany())
+                        .purpose(purpose)
+                        .build());
         
         verification.setCode(code);
         verification.setExpiresAt(LocalDateTime.now().plusMinutes(ttlMinutes));
         verification.setAttempts(0);
+        if (newPassword != null) {
+            verification.setNewPassword(newPassword);
+        }
         
         emailVerificationRepository.save(verification);
         
-        return sendEmailAsync(email, code);
+        return sendEmailAsync(email, code, purpose);
     }
 
-    private CompletableFuture<Void> sendEmailAsync(String email, String code) {
+    private CompletableFuture<Void> sendEmailAsync(String email, String code, int purpose) {
         return CompletableFuture.runAsync(() -> {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(email);
-            message.setSubject("Sapo_Clone - Xác nhận email của bạn");
-            message.setText("Mã xác nhận của bạn là: " + code + "\nMã này sẽ hết hạn sau " + ttlMinutes + " phút.");
+            if (purpose == 1) {
+                message.setSubject("Sapo_Clone - Xác nhận thay đổi mật khẩu");
+                message.setText("Mã xác nhận thay đổi mật khẩu của bạn là: " + code + "\nMã này sẽ hết hạn sau " + ttlMinutes + " phút.");
+            } else {
+                message.setSubject("Sapo_Clone - Xác nhận email của bạn");
+                message.setText("Mã xác nhận của bạn là: " + code + "\nMã này sẽ hết hạn sau " + ttlMinutes + " phút.");
+            }
             
             try {
                 mailSender.send(message);
-                log.info("Email verification sent to {}", email);
+                log.info("Email verification ({}) sent to {}", purpose, email);
             } catch (Exception e) {
                 log.error("Failed to send email to {}: {}", email, e.getMessage());
-                // In a real app, you might want to throw an exception here
             }
         });
     }
 
     @Override
     @Transactional
-    public boolean verifyCode(String email, String code) {
-        EmailVerification verification = emailVerificationRepository.findByEmailAndCode(email, code)
+    public boolean verifyCode(String email, String code, int companyId) {
+        EmailVerification verification = emailVerificationRepository.findByEmailAndCompany_IdAndCode(email, companyId, code)
                 .orElseThrow(() -> new AppException(ErrorCode.VALIDATION_ERROR, "Mã xác nhận không đúng hoặc đã hết hạn"));
 
         if (verification.getExpiresAt().isBefore(LocalDateTime.now())) {
@@ -81,14 +100,20 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
             throw new AppException(ErrorCode.VALIDATION_ERROR, "Mã xác nhận đã hết hạn");
         }
 
-        User user = userRepository.findByUserEmail(email)
+        User user = userRepository.findByUserEmailAndCompany_Id(email, companyId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        user.setUserStatus(1); // ACTIVE
-        userRepository.save(user);
+        if (verification.getPurpose() == 0) {
+            user.setUserStatus(1); // ACTIVE
+            userRepository.save(user);
+            log.info("User {} verified successfully for company {}", email, companyId);
+        } else if (verification.getPurpose() == 1) {
+            user.setPassword(verification.getNewPassword());
+            userRepository.save(user);
+            log.info("User {} password reset successfully for company {}", email, companyId);
+        }
 
         emailVerificationRepository.delete(verification);
-        log.info("User {} verified successfully", email);
         return true;
     }
 }

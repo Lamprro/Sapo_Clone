@@ -4,11 +4,12 @@ import com.example.Sapo_Clone.Entity.Notification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Integer> {
-    Page<Notification> findByTargetUserId(Integer userId, Pageable pageable);
-    Page<Notification> findByTargetRole(String role, Pageable pageable);
-    Page<Notification> findByTargetUserIdOrTargetRole(Integer userId, String role, Pageable pageable);
+    @Query("SELECT n FROM Notification n WHERE n.companyId = :companyId AND (n.targetUserId = :userId OR n.targetRole = :role)")
+    Page<Notification> findByUserAndCompany(@Param("userId") Integer userId, @Param("role") String role, @Param("companyId") Integer companyId, Pageable pageable);
 }
