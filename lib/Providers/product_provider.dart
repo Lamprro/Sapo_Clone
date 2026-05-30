@@ -97,7 +97,7 @@ class ProductProvider with ChangeNotifier {
         stores: stores,
       );
     } catch (e) {
-      _errorMessage = 'Lỗi tải chi tiết sản phẩm: ${ErrorHandler.getErrorMessage(e)}';
+      _errorMessage = 'Error loading product details: ${ErrorHandler.getErrorMessage(e)}';
     } finally {
       _isLoadingDetail = false;
       notifyListeners();
@@ -129,7 +129,7 @@ class ProductProvider with ChangeNotifier {
       );
       notifyListeners();
     } catch (e) {
-      _errorMessage = 'Lỗi tải đánh giá: ${ErrorHandler.getErrorMessage(e)}';
+      _errorMessage = 'Error loading reviews: ${ErrorHandler.getErrorMessage(e)}';
       notifyListeners();
     }
   }
@@ -162,7 +162,7 @@ class ProductProvider with ChangeNotifier {
       _products = pageResponse.content;
       _hasMore = !pageResponse.last;
     } catch (e) {
-      _errorMessage = 'Lỗi tải danh sách sản phẩm: ${ErrorHandler.getErrorMessage(e)}';
+      _errorMessage = 'Error loading product list: ${ErrorHandler.getErrorMessage(e)}';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -193,7 +193,7 @@ class ProductProvider with ChangeNotifier {
       _currentPage = nextPage;
       _hasMore = !pageResponse.last;
     } catch (e) {
-      _errorMessage = 'Lỗi tải thêm sản phẩm: ${ErrorHandler.getErrorMessage(e)}';
+      _errorMessage = 'Error loading more products: ${ErrorHandler.getErrorMessage(e)}';
     } finally {
       _isLoadingMore = false;
       notifyListeners();
@@ -220,7 +220,7 @@ class ProductProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'Lỗi tải lên ảnh: ${ErrorHandler.getErrorMessage(e)}';
+      _errorMessage = 'Error uploading image: ${ErrorHandler.getErrorMessage(e)}';
       notifyListeners();
       return false;
     }
@@ -244,7 +244,7 @@ class ProductProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'Lỗi xóa ảnh: ${ErrorHandler.getErrorMessage(e)}';
+      _errorMessage = 'Error deleting image: ${ErrorHandler.getErrorMessage(e)}';
       notifyListeners();
       return false;
     }
@@ -257,7 +257,7 @@ class ProductProvider with ChangeNotifier {
       await loadProductDetail(productId, customerView: false);
       return true;
     } catch (e) {
-      _errorMessage = 'Lỗi đặt ảnh chính: ${ErrorHandler.getErrorMessage(e)}';
+      _errorMessage = 'Error setting main image: ${ErrorHandler.getErrorMessage(e)}';
       notifyListeners();
       return false;
     }

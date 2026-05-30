@@ -404,7 +404,8 @@ class _ProductListStaffScreenState extends State<ProductListStaffScreen> {
               decoration: BoxDecoration(color: Colors.blue.withOpacity(0.05), border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 itemCount: _categories.length,
                 itemBuilder: (context, index) {
                   final cat = _categories[index];
@@ -419,7 +420,7 @@ class _ProductListStaffScreenState extends State<ProductListStaffScreen> {
                       selectedColor: Colors.blue,
                       checkmarkColor: Colors.white,
                       showCheckmark: false,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.blue.withOpacity(0.3))),
                     ),
                   );
                 },

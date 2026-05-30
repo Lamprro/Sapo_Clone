@@ -90,7 +90,7 @@ class _ProviderManagementScreenState extends State<ProviderManagementScreen> {
                 ),
                 onPressed: () async {
                   if (nameController.text.isEmpty || ueiController.text.isEmpty || phoneController.text.isEmpty || addressController.text.isEmpty) {
-                    ErrorHandler.showInfo(context, 'Vui lòng nhập đầy đủ các thông tin bắt buộc.');
+                    ErrorHandler.showInfo(context, 'Please fill in all required fields.');
                     return;
                   }
                   
@@ -105,7 +105,7 @@ class _ProviderManagementScreenState extends State<ProviderManagementScreen> {
                     );
                     if (success && mounted) {
                       Navigator.pop(context);
-                      ErrorHandler.showSuccess(context, 'Tạo nhà cung cấp thành công!');
+                      ErrorHandler.showSuccess(context, 'Supplier created successfully!');
                     }
                   } catch (e) {
                     final msg = ErrorHandler.getErrorMessage(e);

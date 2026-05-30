@@ -4,6 +4,7 @@ import '../../Providers/auth_provider.dart';
 import '../../models/company.dart';
 import '../../services/company_service.dart';
 import '../../services/user_service.dart';
+import '../../services/auth_service.dart';
 import '../Widgets/custom_text_field.dart';
 import '../Widgets/custom_button.dart';
 import 'signup_screen.dart';
@@ -187,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCompany == null) {
-      ErrorHandler.showInfo(context, 'Vui lòng chọn doanh nghiệp trước khi đăng nhập.');
+      ErrorHandler.showInfo(context, 'Please select a company before logging in.');
       return;
     }
 
@@ -208,50 +209,86 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showUnverifiedDialog() {
     final emailCtrl = TextEditingController();
+    bool isSending = false;
+
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Account Not Verified'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Your account is not activated. Please verify your email to continue.'),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: emailCtrl,
-                label: 'Enter your email',
-                prefixIcon: Icons.email_outlined,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('Account Not Verified'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Your account is not activated. Please verify your email to continue.'),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: emailCtrl,
+                    label: 'Enter your email',
+                    prefixIcon: Icons.email_outlined,
+                  ),
+                ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final email = emailCtrl.text.trim();
-                if (email.isNotEmpty) {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EmailVerificationScreen(email: email),
-                    ),
-                  );
-                }
-              },
-              child: const Text('Verify'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: isSending ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSending
+                      ? null
+                      : () async {
+                          final email = emailCtrl.text.trim();
+                          if (email.isEmpty) {
+                            ErrorHandler.showInfo(context, 'Please enter your email.');
+                            return;
+                          }
+                          setModalState(() => isSending = true);
+                          try {
+                            await AuthService().resendVerification(email, _selectedCompany!.id);
+                            if (context.mounted) {
+                              Navigator.pop(dialogContext);
+                              ErrorHandler.showSuccess(context, 'Verification code sent! Please check your email inbox.');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EmailVerificationScreen(
+                                    email: email,
+                                    companyId: _selectedCompany!.id,
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              setModalState(() => isSending = false);
+                              ErrorHandler.showError(context, ErrorHandler.getErrorMessage(e));
+                            }
+                          }
+                        },
+                  child: isSending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Verify'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
   void _showForgotPasswordDialog() {
+    if (_selectedCompany == null) {
+      ErrorHandler.showInfo(context, 'Please select a company before resetting password.');
+      return;
+    }
     final forgotFormKey = GlobalKey<FormState>();
     final fUsernameCtrl = TextEditingController();
     final fEmailCtrl = TextEditingController();
@@ -322,10 +359,20 @@ class _LoginScreenState extends State<LoginScreen> {
                               email: fEmailCtrl.text.trim(),
                               newPassword: fNewPasswordCtrl.text,
                               confirmPassword: fConfirmPasswordCtrl.text,
+                              companyId: _selectedCompany!.id,
                             );
                             if (context.mounted) {
                               Navigator.pop(context);
                               ErrorHandler.showSuccess(context, msg);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EmailVerificationScreen(
+                                    email: fEmailCtrl.text.trim(),
+                                    companyId: _selectedCompany!.id,
+                                  ),
+                                ),
+                              );
                             }
                           } catch (e) {
                             if (context.mounted) {

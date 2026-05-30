@@ -36,7 +36,7 @@ class _RatingInputWidgetState extends State<RatingInputWidget> {
     final isEditing = widget.existingRating != null;
 
     return AlertDialog(
-      title: Text(isEditing ? 'Sửa đánh giá' : 'Đánh giá sản phẩm'),
+      title: Text(isEditing ? 'Edit review' : 'Rate product'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -62,7 +62,7 @@ class _RatingInputWidgetState extends State<RatingInputWidget> {
               controller: _commentController,
               maxLines: 3,
               decoration: const InputDecoration(
-                hintText: 'Nhập nhận xét của bạn...',
+                hintText: 'Enter your comments...',
                 border: OutlineInputBorder(),
               ),
               enabled: !_isSubmitting,
@@ -73,13 +73,13 @@ class _RatingInputWidgetState extends State<RatingInputWidget> {
       actions: [
         TextButton(
           onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-          child: const Text('Hủy'),
+          child: const Text('Cancel'),
         ),
         ElevatedButton(
           onPressed: _isSubmitting ? null : _handleSubmit,
           child: _isSubmitting
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-              : Text(isEditing ? 'Cập nhật' : 'Gửi'),
+              : Text(isEditing ? 'Update' : 'Submit'),
         ),
       ],
     );

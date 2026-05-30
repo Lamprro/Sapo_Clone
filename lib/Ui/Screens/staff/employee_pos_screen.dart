@@ -149,19 +149,19 @@ class _EmployeePosScreenState extends State<EmployeePosScreen> {
     final orderProvider = context.read<OrderProvider>();
 
     if (_selectedCustomer == null) {
-      ErrorHandler.showInfo(context, 'Vui lòng chọn khách hàng.');
+      ErrorHandler.showInfo(context, 'Please select a customer.');
       return;
     }
 
     if (_saleItems.isEmpty) {
-      ErrorHandler.showInfo(context, 'Giỏ hàng đang trống. Vui lòng thêm sản phẩm.');
+      ErrorHandler.showInfo(context, 'Cart is empty. Please add products.');
       return;
     }
 
     final redeemPoints = int.tryParse(_redeemPointsController.text.trim()) ?? 0;
     final availablePoints = _selectedCustomer!.pointValue ?? 0;
     if (redeemPoints > availablePoints) {
-      ErrorHandler.showError(context, 'Khách hàng chỉ có $availablePoints điểm.');
+      ErrorHandler.showError(context, 'Customer only has $availablePoints points.');
       return;
     }
 
@@ -191,7 +191,7 @@ class _EmployeePosScreenState extends State<EmployeePosScreen> {
         _selectedCustomer = null;
         _noteController.clear();
       });
-      ErrorHandler.showSuccess(context, 'Thanh toán đơn hàng thành công!');
+      ErrorHandler.showSuccess(context, 'Order paid successfully!');
     } else if (orderProvider.errorMessage != null) {
       ErrorHandler.showError(context, orderProvider.errorMessage!);
     }
@@ -200,7 +200,7 @@ class _EmployeePosScreenState extends State<EmployeePosScreen> {
   Future<void> _submitDispose() async {
     final orderProvider = context.read<OrderProvider>();
     if (_disposeItems.isEmpty) {
-      ErrorHandler.showInfo(context, 'Vui lòng chọn ít nhất một sản phẩm cần thanh lý.');
+      ErrorHandler.showInfo(context, 'Please select at least one product to dispose.');
       return;
     }
 
@@ -217,9 +217,9 @@ class _EmployeePosScreenState extends State<EmployeePosScreen> {
         _disposeItems.clear();
         _disposeNoteController.clear();
       });
-      ErrorHandler.showSuccess(context, 'Đã hoàn thành thanh lý hàng tồn kho!');
+      ErrorHandler.showSuccess(context, 'Inventory disposal completed successfully!');
     } else {
-      ErrorHandler.showError(context, orderProvider.errorMessage ?? 'Không thể thanh lý hàng tồn kho');
+      ErrorHandler.showError(context, orderProvider.errorMessage ?? 'Could not dispose inventory');
     }
   }
 
@@ -653,9 +653,9 @@ class _EmployeePosScreenState extends State<EmployeePosScreen> {
                     if (success) {
                       Navigator.pop(context);
                       userProvider.fetchUsers();
-                      ErrorHandler.showSuccess(context, 'Đăng ký khách hàng mới thành công!');
+                      ErrorHandler.showSuccess(context, 'New customer registered successfully!');
                     } else {
-                      final msg = userProvider.errorMessage ?? "Lỗi không xác định";
+                      final msg = userProvider.errorMessage ?? "Unknown error";
                       ErrorHandler.showError(context, msg);
                     }
                   },

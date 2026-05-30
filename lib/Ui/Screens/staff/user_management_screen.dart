@@ -179,10 +179,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
           if (success && mounted) {
             sheetNavigator.pop();
-            ErrorHandler.showSuccess(context, 'Tạo tài khoản nhân viên thành công!');
+            ErrorHandler.showSuccess(context, 'Employee account created successfully!');
             provider.fetchUsers();
           } else if (mounted) {
-            ErrorHandler.showError(context, provider.errorMessage ?? 'Không thể tạo nhân viên');
+            ErrorHandler.showError(context, provider.errorMessage ?? 'Could not create employee');
           }
         },
       ),
@@ -343,9 +343,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               final success = await provider.updateUserStatus(user.id, newStatus);
               if (success && mounted) {
                 dialogNavigator.pop();
-                ErrorHandler.showSuccess(context, 'Cập nhật trạng thái người dùng thành công!');
+                ErrorHandler.showSuccess(context, 'User status updated successfully!');
               } else if (mounted) {
-                ErrorHandler.showError(context, provider.errorMessage ?? 'Không thể cập nhật trạng thái người dùng');
+                ErrorHandler.showError(context, provider.errorMessage ?? 'Could not update user status');
               }
             },
             child: const Text('Confirm'),

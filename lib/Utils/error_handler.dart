@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 class ErrorHandler {
-  /// Extracts a human-readable error message in Vietnamese from backend responses.
+  /// Extracts a human-readable error message in English from backend responses.
   static String getErrorMessage(dynamic error) {
     if (error is DioException) {
       if (error.response != null && error.response!.data != null) {
@@ -30,16 +30,16 @@ class ErrorHandler {
 
       // Fallback Dio messages
       if (error.response?.statusCode == 401) {
-        return 'Tên đăng nhập hoặc mật khẩu không đúng';
+        return 'Invalid username or password';
       }
       if (error.response?.statusCode == 403) {
-        return 'Tài khoản chưa được kích hoạt hoặc không có quyền truy cập';
+        return 'Account not activated or access denied';
       }
       if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.receiveTimeout) {
-        return 'Kết nối mạng bị quá hạn. Vui lòng thử lại.';
+        return 'Network connection timed out. Please try again.';
       }
-      return error.message ?? 'Đã xảy ra lỗi mạng không xác định';
+      return error.message ?? 'An unknown network error occurred';
     }
     return error.toString();
   }

@@ -70,20 +70,22 @@ class AuthService {
 
   /// Verify email with code.
   ///
-  /// Backend: POST /api/auth/verify-email?email=...&code=...
-  Future<void> verifyEmail(String email, String code) async {
+  /// Backend: POST /api/auth/verify-email?email=...&code=...&companyId=...
+  Future<void> verifyEmail(String email, String code, int companyId) async {
     await _dio.post('/api/auth/verify-email', queryParameters: {
       'email': email,
       'code': code,
+      'companyId': companyId,
     });
   }
 
   /// Resend verification code.
   ///
-  /// Backend: POST /api/auth/resend-verification?email=...
-  Future<void> resendVerification(String email) async {
+  /// Backend: POST /api/auth/resend-verification?email=...&companyId=...
+  Future<void> resendVerification(String email, int companyId) async {
     await _dio.post('/api/auth/resend-verification', queryParameters: {
       'email': email,
+      'companyId': companyId,
     });
   }
 }

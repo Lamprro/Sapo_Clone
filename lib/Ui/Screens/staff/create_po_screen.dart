@@ -195,15 +195,15 @@ class _CreatePOScreenState extends State<CreatePOScreen> {
 
   Future<void> _submitPO() async {
     if (_selectedProvider == null) {
-      ErrorHandler.showInfo(context, 'Vui lòng chọn nhà cung cấp.');
+      ErrorHandler.showInfo(context, 'Please select a supplier.');
       return;
     }
     if (_selectedStore == null) {
-      ErrorHandler.showInfo(context, 'Vui lòng chọn kho nhận hàng.');
+      ErrorHandler.showInfo(context, 'Please select a receiving store.');
       return;
     }
     if (_items.isEmpty) {
-      ErrorHandler.showInfo(context, 'Vui lòng thêm ít nhất một sản phẩm vào đơn.');
+      ErrorHandler.showInfo(context, 'Please add at least one product to the order.');
       return;
     }
 
@@ -222,10 +222,10 @@ class _CreatePOScreenState extends State<CreatePOScreen> {
     final success = await context.read<PurchaseOrderProvider>().createPurchaseOrder(dto);
     if (success && mounted) {
       Navigator.pop(context);
-      ErrorHandler.showSuccess(context, 'Tạo đơn đặt hàng thành công!');
+      ErrorHandler.showSuccess(context, 'Purchase order created successfully!');
     } else if (mounted) {
       final error = context.read<PurchaseOrderProvider>().errorMessage;
-      ErrorHandler.showError(context, error ?? 'Không thể tạo đơn đặt hàng');
+      ErrorHandler.showError(context, error ?? 'Could not create purchase order');
     }
   }
 
@@ -261,9 +261,9 @@ class _CreatePOScreenState extends State<CreatePOScreen> {
         orElse: () => productProvider.products.first,
       );
       _addItem(p);
-      ErrorHandler.showSuccess(context, 'Đã thêm: ${p.productName}');
+      ErrorHandler.showSuccess(context, 'Added: ${p.productName}');
     } else {
-      ErrorHandler.showError(context, 'Không tìm thấy sản phẩm với mã vạch này');
+      ErrorHandler.showError(context, 'Product not found with this barcode');
     }
   }
 

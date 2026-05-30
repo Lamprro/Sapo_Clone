@@ -176,18 +176,28 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
       body: Column(
         children: [
           // Status tabs like customer screen
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            child: Row(
-              children: _statusOptions.entries.map((entry) {
+          Container(
+            height: 50,
+            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.05), border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              itemCount: _statusOptions.length,
+              itemBuilder: (context, index) {
+                final entry = _statusOptions.entries.elementAt(index);
                 final status = entry.key;
                 final isSelected = _filterStatus == status;
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ChoiceChip(
-                    label: Text(entry.value, style: const TextStyle(fontSize: 12)),
+                    visualDensity: VisualDensity.compact,
+                    label: Text(entry.value, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.blue)),
                     selected: isSelected,
+                    selectedColor: Colors.blue,
+                    checkmarkColor: Colors.white,
+                    showCheckmark: false,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.blue.withOpacity(0.3))),
                     onSelected: (selected) {
                       if (!selected) return;
                       setState(() => _filterStatus = status);
@@ -195,7 +205,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
                     },
                   ),
                 );
-              }).toList(),
+              },
             ),
           ),
           Expanded(

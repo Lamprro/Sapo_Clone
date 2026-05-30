@@ -13,7 +13,7 @@ class OrderProvider with ChangeNotifier {
   String? _errorMessage;
   int? _expandedOrderId;
   OrderResponse? _expandedOrder;
-  int? _lastStatus; // Ghi nhớ status cuối cùng được fetch
+  int? _lastStatus; // Remembers the last status fetched
 
   List<OrderListResponse> get orders => _orders;
   List<OrderResponse> get lastCreatedOrders => _lastCreatedOrders;
@@ -38,7 +38,7 @@ class OrderProvider with ChangeNotifier {
       );
       _orders = page.content;
     } catch (e) {
-      _errorMessage = "Lỗi khi lấy danh sách đơn hàng: ${ErrorHandler.getErrorMessage(e)}";
+      _errorMessage = "Error fetching orders: ${ErrorHandler.getErrorMessage(e)}";
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -89,10 +89,10 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
     try {
       await _service.changeStatus(orderId, 5); // 5 = CANCELLED
-      await fetchOrders(status: _lastStatus, keyword: _lastKeyword); // Refresh với đúng tab và keyword hiện tại
+      await fetchOrders(status: _lastStatus, keyword: _lastKeyword); // Refresh with the correct tab and keyword
       return true;
     } catch (e) {
-      _errorMessage = "Lỗi khi hủy đơn: ${ErrorHandler.getErrorMessage(e)}";
+      _errorMessage = "Error cancelling order: ${ErrorHandler.getErrorMessage(e)}";
       return false;
     } finally {
       _isLoading = false;
@@ -106,10 +106,10 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
     try {
       await _service.changeStatus(orderId, 4); // 4 = COMPLETED
-      await fetchOrders(status: _lastStatus, keyword: _lastKeyword); // Refresh với đúng tab hiện tại
+      await fetchOrders(status: _lastStatus, keyword: _lastKeyword); // Refresh with the correct current tab
       return true;
     } catch (e) {
-      _errorMessage = "Lỗi khi xác nhận: ${ErrorHandler.getErrorMessage(e)}";
+      _errorMessage = "Error confirming: ${ErrorHandler.getErrorMessage(e)}";
       return false;
     } finally {
       _isLoading = false;
@@ -125,7 +125,7 @@ class OrderProvider with ChangeNotifier {
       _expandedOrder = await _service.getOrder(orderId);
       notifyListeners();
     } catch (e) {
-      _errorMessage = "Lỗi khi lấy chi tiết: ${ErrorHandler.getErrorMessage(e)}";
+      _errorMessage = "Error getting details: ${ErrorHandler.getErrorMessage(e)}";
       notifyListeners();
     }
   }
@@ -148,7 +148,7 @@ class OrderProvider with ChangeNotifier {
       await fetchOrders(status: _lastStatus, keyword: _lastKeyword);
       return true;
     } catch (e) {
-      _errorMessage = "Lỗi khi đổi trạng thái: ${ErrorHandler.getErrorMessage(e)}";
+      _errorMessage = "Error changing status: ${ErrorHandler.getErrorMessage(e)}";
       return false;
     } finally {
       _isLoading = false;
@@ -168,7 +168,7 @@ class OrderProvider with ChangeNotifier {
       await fetchOrders(status: _lastStatus, keyword: _lastKeyword);
       return true;
     } catch (e) {
-      _errorMessage = "Lỗi khi đổi trạng thái thanh toán: ${ErrorHandler.getErrorMessage(e)}";
+      _errorMessage = "Error changing payment status: ${ErrorHandler.getErrorMessage(e)}";
       return false;
     } finally {
       _isLoading = false;
@@ -185,7 +185,7 @@ class OrderProvider with ChangeNotifier {
       await fetchOrders(status: _lastStatus, keyword: _lastKeyword);
       return true;
     } catch (e) {
-      _errorMessage = "Lỗi khi tạo phiếu thoát hàng: ${ErrorHandler.getErrorMessage(e)}";
+      _errorMessage = "Error creating inventory disposal order: ${ErrorHandler.getErrorMessage(e)}";
       return false;
     } finally {
       _isLoading = false;
@@ -213,7 +213,7 @@ class OrderProvider with ChangeNotifier {
       notifyListeners();
       return report;
     } catch (e) {
-      _errorMessage = "Lỗi khi lấy báo cáo: ${ErrorHandler.getErrorMessage(e)}";
+      _errorMessage = "Error getting report: ${ErrorHandler.getErrorMessage(e)}";
       _isLoading = false;
       notifyListeners();
       return null;

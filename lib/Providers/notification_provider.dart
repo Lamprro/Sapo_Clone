@@ -87,24 +87,20 @@ class NotificationProvider with ChangeNotifier {
   }
 
   Future<void> markAsRead(String id) async {
-    // Optimistic update
     final index = _notifications.indexWhere((n) => n.id == id);
-    if (index != -1) {
-      _notifications[index].read = true;
-      notifyListeners();
-    }
+    if (index == -1) return;
+
+    final removedNotif = _notifications[index];
+
+    _notifications.removeAt(index);
+    notifyListeners();
 
     try {
       await _service.markAsRead(id);
-      // Remove from unread list entirely if successful
-      _notifications.removeWhere((n) => n.id == id);
-      notifyListeners();
     } catch (e) {
-      // Revert if failed
-      if (index != -1) {
-        _notifications[index].read = false;
-        notifyListeners();
-      }
+      _notifications.insert(index, removedNotif);
+      notifyListeners();
+
       if (kDebugMode) {
         print('Error marking notification as read: $e');
       }
@@ -114,21 +110,21 @@ class NotificationProvider with ChangeNotifier {
   Future<void> markAllAsRead() async {
     if (_notifications.isEmpty) return;
 
-    // Lấy danh sách ID hiện tại
+    // Get the list of current IDs
     final idsToMark = _notifications.map((n) => n.id).toList();
 
-    // Lạc quan: Xóa luôn trên UI
+    // Optimistic update: Clear immediately from UI
     _notifications.clear();
     notifyListeners();
 
     try {
-      // Gửi request API song song cho tất cả các ID chưa đọc
+      // Send parallel API requests for all unread IDs
       await Future.wait(idsToMark.map((id) => _service.markAsRead(id)));
     } catch (e) {
       if (kDebugMode) {
         print('Error marking all as read: $e');
       }
-      // Nếu thất bại có thể reload lại toàn bộ
+      // If failed, reload everything
       fetchUnread();
     }
   }

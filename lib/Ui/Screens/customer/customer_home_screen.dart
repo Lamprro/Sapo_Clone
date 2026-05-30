@@ -134,7 +134,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ),
         ),
 
-        // Categories List (Horizontal Scrollable)
+        // Categories List
         if (_isLoadingCategories)
           const LinearProgressIndicator(minHeight: 2)
         else if (_categories.isNotEmpty)
@@ -143,7 +143,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             color: Theme.of(context).primaryColor.withOpacity(0.05),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               itemCount: _categories.length,
               itemBuilder: (context, index) {
                 final cat = _categories[index];
@@ -151,18 +152,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: FilterChip(
+                    visualDensity: VisualDensity.compact,
                     label: Text(cat.categoryName),
                     selected: isSelected,
                     onSelected: (_) => _toggleCategory(cat.id),
                     selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
                     checkmarkColor: Theme.of(context).primaryColor,
+                    showCheckmark: false,
                     labelStyle: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: isSelected ? Theme.of(context).primaryColor : Colors.black87,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Theme.of(context).primaryColor.withOpacity(0.3))),
                   ),
                 );
               },

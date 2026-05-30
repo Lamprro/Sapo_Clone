@@ -11,7 +11,7 @@ class RatingDisplayWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Xử lý hiển thị ngày tháng an toàn
+    // Safely handle date display
     String displayDate = "N/A";
     if (rating.updatedAt != null && rating.updatedAt!.length >= 10) {
       displayDate = rating.updatedAt!.substring(0, 10);

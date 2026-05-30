@@ -212,10 +212,10 @@ class _PromotionManagementScreenState extends State<PromotionManagementScreen> {
                 : await provider.createOrderPromotion(dto);
             if (success && mounted) {
               Navigator.pop(context);
-              ErrorHandler.showSuccess(context, 'Tạo chương trình khuyến mãi thành công!');
+              ErrorHandler.showSuccess(context, 'Promotion program created successfully!');
               _provider.fetchPromotions(companyId: _companyId);
             } else if (mounted) {
-              ErrorHandler.showError(context, provider.errorMessage ?? 'Không thể tạo chương trình khuyến mãi');
+              ErrorHandler.showError(context, provider.errorMessage ?? 'Could not create promotion program');
             }
           },
         ),
@@ -243,10 +243,10 @@ class _PromotionManagementScreenState extends State<PromotionManagementScreen> {
             final success = await provider.updatePromotion(promo.id!, dto);
             if (success && mounted) {
               Navigator.pop(context);
-              ErrorHandler.showSuccess(context, 'Cập nhật chương trình khuyến mãi thành công!');
+              ErrorHandler.showSuccess(context, 'Promotion program updated successfully!');
               _provider.fetchPromotions(companyId: _companyId);
             } else if (mounted) {
-              ErrorHandler.showError(context, provider.errorMessage ?? 'Không thể cập nhật chương trình khuyến mãi');
+              ErrorHandler.showError(context, provider.errorMessage ?? 'Could not update promotion program');
             }
           },
         ),
@@ -278,10 +278,10 @@ class _PromotionManagementScreenState extends State<PromotionManagementScreen> {
                   await provider.changePromotionStatus(promo.id!, newStatus);
               if (success && mounted) {
                 Navigator.pop(context);
-                ErrorHandler.showSuccess(context, 'Cập nhật trạng thái thành công!');
+                ErrorHandler.showSuccess(context, 'Status updated successfully!');
                 _provider.fetchPromotions(companyId: _companyId);
               } else if (mounted) {
-                ErrorHandler.showError(context, provider.errorMessage ?? 'Không thể cập nhật trạng thái');
+                ErrorHandler.showError(context, provider.errorMessage ?? 'Could not update status');
               }
             },
             child: const Text('Confirm'),
@@ -661,7 +661,7 @@ class _PromotionFormSheetState extends State<PromotionFormSheet> {
 
   void _submit() {
     if (_nameController.text.isEmpty || _discountValueController.text.isEmpty) {
-      ErrorHandler.showInfo(context, 'Vui lòng nhập đầy đủ các thông tin bắt buộc.');
+      ErrorHandler.showInfo(context, 'Please fill in all required fields.');
       return;
     }
     final dto = PromotionCreateDTO(

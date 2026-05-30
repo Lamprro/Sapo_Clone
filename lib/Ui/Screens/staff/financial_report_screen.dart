@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 import '../../../Providers/order_provider.dart';
 import '../../../Providers/purchase_order_provider.dart';
 import '../../../models/purchase_order.dart';
+import '../../../models/order.dart';
+import '../../../models/store.dart';
+import '../../../services/store_service.dart';
 
 class FinancialReportScreen extends StatefulWidget {
   const FinancialReportScreen({super.key});
@@ -21,6 +24,32 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
   Map<String, dynamic>? _orderReport;
   Map<String, dynamic>? _poReport;
   bool _isLoading = false;
+
+  List<StoreResponse> _stores = [];
+  bool _isLoadingStores = false;
+  bool _isPoExpanded = false;
+  bool _isOrderExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStoreId = -2; // Default to whole company report
+    _loadStores();
+  }
+
+  Future<void> _loadStores() async {
+    setState(() => _isLoadingStores = true);
+    try {
+      final stores = await StoreService().getAllStores();
+      setState(() {
+        _stores = stores;
+      });
+    } catch (e) {
+      debugPrint("Error loading stores for report: $e");
+    } finally {
+      setState(() => _isLoadingStores = false);
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -61,6 +90,8 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
     setState(() {
       _orderReport = orderReport;
       _poReport = poReport;
+      _isPoExpanded = false;
+      _isOrderExpanded = false;
       _isLoading = false;
     });
   }
@@ -113,6 +144,8 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
                         colors: [Colors.blue, Colors.green],
                       ),
                       const SizedBox(height: 24),
+                      _buildOrderList(_orderReport),
+                      const SizedBox(height: 24),
                       _buildSummaryCard(
                         title: 'Purchasing Report',
                         data: _poReport,
@@ -148,6 +181,33 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
       color: Colors.white,
       child: Column(
         children: [
+          DropdownButtonFormField<int>(
+            value: _selectedStoreId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Select Store Scope',
+              prefixIcon: Icon(Icons.store),
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem(
+                value: -2, 
+                child: Text('Entire Company (Toàn công ty)', overflow: TextOverflow.ellipsis)
+              ),
+              ..._stores.map((s) {
+                return DropdownMenuItem(
+                  value: s.id,
+                  child: Text(s.storeName, overflow: TextOverflow.ellipsis),
+                );
+              }),
+            ],
+            onChanged: (val) {
+              if (val != null) {
+                setState(() => _selectedStoreId = val);
+              }
+            },
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -168,7 +228,14 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('From', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text(DateFormat('dd MMM yyyy').format(_startDate), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            DateFormat('dd MMM yyyy').format(_startDate), 
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -193,7 +260,14 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('To', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text(DateFormat('dd MMM yyyy').format(_endDate), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            DateFormat('dd MMM yyyy').format(_endDate), 
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -294,7 +368,14 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Text(_formatValue(metric.value), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _formatValue(metric.value), 
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                              maxLines: 1,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Container(
                             height: 120 * normalized,
@@ -308,7 +389,15 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(metric.label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              metric.label, 
+                              textAlign: TextAlign.center, 
+                              style: const TextStyle(fontSize: 11),
+                              maxLines: 1,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -331,6 +420,8 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
             .toList()
         : <PurchaseOrderResponse>[];
 
+    final displayedOrders = _isPoExpanded ? orders : orders.take(5).toList();
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -341,14 +432,14 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
             const SizedBox(height: 12),
             if (orders.isEmpty)
               const Text('No purchase orders in the selected range')
-            else
+            else ...[
               ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: orders.length,
+                itemCount: displayedOrders.length,
                 separatorBuilder: (context, index) => const Divider(height: 16),
                 itemBuilder: (context, index) {
-                  final order = orders[index];
+                  final order = displayedOrders[index];
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     leading: Container(
@@ -365,6 +456,87 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
                   );
                 },
               ),
+              if (orders.length > 5) ...[
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _isPoExpanded = !_isPoExpanded;
+                      });
+                    },
+                    icon: Icon(_isPoExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+                    label: Text(_isPoExpanded ? 'SHOW LESS' : 'SHOW ALL (${orders.length} orders)'),
+                  ),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderList(Map<String, dynamic>? report) {
+    final rawOrders = report?['orders'];
+    final orders = rawOrders is List
+        ? rawOrders
+            .whereType<Map<String, dynamic>>()
+            .map(OrderResponse.fromJson)
+            .toList()
+        : <OrderResponse>[];
+
+    final displayedOrders = _isOrderExpanded ? orders : orders.take(5).toList();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Completed Orders (Đơn bán hoàn thành)', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            if (orders.isEmpty)
+              const Text('No completed orders in the selected range')
+            else ...[
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: displayedOrders.length,
+                separatorBuilder: (context, index) => const Divider(height: 16),
+                itemBuilder: (context, index) {
+                  final order = displayedOrders[index];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.shopping_bag_outlined, color: Colors.green, size: 20),
+                    ),
+                    title: Text('Order #${order.id}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: Text('${order.storeName ?? "Store " + order.storeId.toString()} • ${order.customerName ?? "Guest Customer"}', style: const TextStyle(fontSize: 12)),
+                    trailing: Text(_formatValue(order.totalAmount), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                    onTap: () {
+                       // Navigate to detail if needed
+                    },
+                  );
+                },
+              ),
+              if (orders.length > 5) ...[
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _isOrderExpanded = !_isOrderExpanded;
+                      });
+                    },
+                    icon: Icon(_isOrderExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+                    label: Text(_isOrderExpanded ? 'SHOW LESS' : 'SHOW ALL (${orders.length} orders)'),
+                  ),
+                ),
+              ],
+            ],
           ],
         ),
       ),

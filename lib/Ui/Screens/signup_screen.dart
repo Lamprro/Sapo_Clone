@@ -260,12 +260,15 @@ class _SignupScreenState extends State<SignupScreen> {
     );
 
     if (success && mounted) {
-      ErrorHandler.showSuccess(context, 'Đăng ký tài khoản thành công! Vui lòng xác thực email của bạn.');
+      ErrorHandler.showSuccess(context, 'Account registered successfully! Please verify your email.');
       // Navigate to email verification screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => EmailVerificationScreen(email: _emailCtrl.text.trim()),
+          builder: (context) => EmailVerificationScreen(
+            email: _emailCtrl.text.trim(),
+            companyId: _selectedCompany!.id,
+          ),
         ),
       );
     }

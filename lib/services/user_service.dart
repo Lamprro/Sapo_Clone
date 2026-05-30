@@ -73,6 +73,7 @@ class UserService {
     required String email,
     required String newPassword,
     required String confirmPassword,
+    required int companyId,
   }) async {
     try {
       final response = await _dio.patch('/api/user/forgot-password', data: {
@@ -80,6 +81,7 @@ class UserService {
         'email': email,
         'newPassword': newPassword,
         'confirmPassword': confirmPassword,
+        'companyId': companyId,
       });
       return response.data['message'] ?? 'Success';
     } on DioException catch (e) {

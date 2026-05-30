@@ -57,12 +57,14 @@ class StoreService {
     required String storeAddress,
     double? latitude,
     double? longitude,
+    int? companyId,
   }) async {
     final response = await _dio.post('/api/store', data: {
       'storeName': storeName,
       'storeAddress': storeAddress,
       'latitude': latitude,
       'longitude': longitude,
+      if (companyId != null) 'companyId': companyId,
     });
     return StoreResponse.fromJson(response.data['data'] as Map<String, dynamic>);
   }
@@ -73,12 +75,14 @@ class StoreService {
     required String storeAddress,
     double? latitude,
     double? longitude,
+    int? companyId,
   }) async {
     final response = await _dio.put('/api/store/$id', data: {
       'storeName': storeName,
       'storeAddress': storeAddress,
       'latitude': latitude,
       'longitude': longitude,
+      if (companyId != null) 'companyId': companyId,
     });
     return StoreResponse.fromJson(response.data['data'] as Map<String, dynamic>);
   }

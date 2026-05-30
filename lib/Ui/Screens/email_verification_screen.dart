@@ -5,8 +5,9 @@ import '../Widgets/custom_button.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
+  final int companyId;
 
-  const EmailVerificationScreen({super.key, required this.email});
+  const EmailVerificationScreen({super.key, required this.email, required this.companyId});
 
   @override
   State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
@@ -27,15 +28,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Future<void> _verifyCode() async {
     final code = _codeCtrl.text.trim();
     if (code.length != 6) {
-      ErrorHandler.showInfo(context, 'Vui lòng nhập đầy đủ mã xác nhận gồm 6 chữ số.');
+      ErrorHandler.showInfo(context, 'Please enter a complete 6-digit verification code.');
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      await _authService.verifyEmail(widget.email, code);
+      await _authService.verifyEmail(widget.email, code, widget.companyId);
       if (mounted) {
-        ErrorHandler.showSuccess(context, 'Xác thực email thành công! Bạn có thể đăng nhập ngay.');
+        ErrorHandler.showSuccess(context, 'Verification successful!');
         // Navigate back to login
         Navigator.pop(context);
       }
@@ -51,9 +52,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Future<void> _resendCode() async {
     setState(() => _isResending = true);
     try {
-      await _authService.resendVerification(widget.email);
+      await _authService.resendVerification(widget.email, widget.companyId);
       if (mounted) {
-        ErrorHandler.showSuccess(context, 'Đã gửi lại mã xác nhận mới! Vui lòng kiểm tra hộp thư email.');
+        ErrorHandler.showSuccess(context, 'New verification code sent! Please check your email inbox.');
       }
     } catch (e) {
       if (mounted) {

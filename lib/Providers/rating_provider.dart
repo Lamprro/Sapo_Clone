@@ -20,7 +20,7 @@ class RatingProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  // Tải tất cả đánh giá của user hiện tại
+  // Load all reviews of the current user
   Future<void> loadUserRatings() async {
     _isLoading = true;
     _errorMessage = null;
@@ -51,7 +51,7 @@ class RatingProvider with ChangeNotifier {
     }
   }
 
-  // Tạo mới một đánh giá
+  // Create a new rating
   Future<bool> createRating(int productId, int rating, String comment) async {
     _isLoading = true;
     _errorMessage = null;
@@ -70,7 +70,7 @@ class RatingProvider with ChangeNotifier {
     }
   }
 
-  // Cập nhật đánh giá hiện có
+  // Update an existing rating
   Future<bool> updateRating(int ratingId, int rating, String comment) async {
     _isLoading = true;
     _errorMessage = null;
@@ -90,7 +90,7 @@ class RatingProvider with ChangeNotifier {
     }
   }
 
-  // Xóa đánh giá
+  // Delete rating
   Future<bool> deleteRating(int ratingId) async {
     _isLoading = true;
     _errorMessage = null;

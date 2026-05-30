@@ -4,11 +4,11 @@ import 'package:flutter/foundation.dart';
 
 /// ApiService is a singleton that provides a configured Dio instance.
 class ApiService {
-  // Tự động nhận diện URL dựa trên nền tảng đang chạy
+  // Automatically detect base URL based on the platform the app is running on
   static String get _baseUrl {
     if (kIsWeb) return 'http://localhost:8080';
-    if (Platform.isAndroid) return 'http://10.0.2.2:8080'; // Cho Android Emulator
-    return 'http://localhost:8080'; // Cho Windows, iOS Simulator hoặc Mac
+    if (Platform.isAndroid) return 'http://10.0.2.2:8080'; // For Android Emulator
+    return 'http://localhost:8080'; // For Windows, iOS Simulator, or Mac
   }
 
   ApiService._internal() {
