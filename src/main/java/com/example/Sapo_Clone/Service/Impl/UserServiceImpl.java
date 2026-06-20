@@ -108,31 +108,45 @@ public class UserServiceImpl implements UserService {
             currentCompanyId = null;
 
         // 2. Determine Target Role and Company based on Hierarchy
-        String targetRoleName;
+        String targetRoleName = null;
         int targetCompanyId;
 
+        if (dto.getRoleId() != null) {
+            if (dto.getRoleId() == 2) targetRoleName = "MANAGER";
+            else if (dto.getRoleId() == 3) targetRoleName = "EMPLOYEE";
+            else if (dto.getRoleId() == 4) targetRoleName = "CUSTOMER";
+        }
+
         if ("ADMIN".equals(currentRole)) {
-            // ADMIN creates MANAGER - Administrator must provide companyId
-            targetRoleName = "MANAGER";
-            targetCompanyId = dto.getCompanyId();
+            if (targetRoleName == null) targetRoleName = "MANAGER";
+            targetCompanyId = dto.getCompanyId() != null ? dto.getCompanyId() : 0;
         } else if ("MANAGER".equals(currentRole)) {
-            // MANAGER creates EMPLOYEE - Inherits companyId from MANAGER
-            targetRoleName = "EMPLOYEE";
+            if (targetRoleName == null) targetRoleName = "EMPLOYEE";
             targetCompanyId = currentCompanyId;
         } else if ("EMPLOYEE".equals(currentRole)) {
-            // EMPLOYEE creates CUSTOMER - Inherits companyId from EMPLOYEE
             targetRoleName = "CUSTOMER";
             targetCompanyId = currentCompanyId;
         } else {
-            // Public Signup -> CUSTOMER - Must provide companyId
             targetRoleName = "CUSTOMER";
-            targetCompanyId = dto.getCompanyId();
+            targetCompanyId = dto.getCompanyId() != null ? dto.getCompanyId() : 0;
         }
 
         Store store = null;
-        if (!targetRoleName.equals("CUSTOMER")) {
-            store = storeRepository.findById(dto.getStoreId())
-                    .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
+        if (!"CUSTOMER".equals(targetRoleName)) {
+            Integer storeId = dto.getStoreId();
+            if (storeId == null || storeId == 0) {
+                // Fallback to manager's store if storeId is not provided
+                if ("MANAGER".equals(currentRole)) {
+                    User creator = userRepository.findById(SecurityUtils.getCurrentUserId()).orElse(null);
+                    if (creator != null && creator.getStore() != null) {
+                        storeId = creator.getStore().getId();
+                    }
+                }
+            }
+            if (storeId != null && storeId > 0) {
+                store = storeRepository.findById(storeId)
+                        .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
+            }
         }
 
         log.info("Hierarchy check: creatorRole={}, creatorCompanyId={} -> targetRole={}, targetCompanyId={}",
@@ -252,9 +266,13 @@ public class UserServiceImpl implements UserService {
         int companyId = user.getCompany() != null ? user.getCompany().getId() : 0;
 
         // Check for duplicates if email or phone is changed
-        if (!Objects.equals(user.getUserEmail(), dto.getEmail())
-                && userRepository.existsByUserEmailAndCompany_Id(dto.getEmail(), companyId)) {
-            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        if (!Objects.equals(user.getUserEmail(), dto.getEmail())) {
+            if (user.getRoles() != null && "CUSTOMER".equalsIgnoreCase(user.getRoles().getRolesName())) {
+                throw new AppException(ErrorCode.EMAIL_CANNOT_BE_CHANGED);
+            }
+            if (userRepository.existsByUserEmailAndCompany_Id(dto.getEmail(), companyId)) {
+                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            }
         }
         if (!Objects.equals(user.getUserPhone(), dto.getPhone())
                 && userRepository.existsByUserPhoneAndCompany_Id(dto.getPhone(), companyId)) {

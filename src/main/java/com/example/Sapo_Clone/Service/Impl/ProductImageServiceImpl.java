@@ -174,7 +174,11 @@ public class ProductImageServiceImpl implements ProductImageService {
                 .orElseThrow(() -> new AppException(ErrorCode.IMAGE_NOT_FOUND));
 
         boolean wasMain = (image.getStatus() == STATUS_MAIN);
-        cloudService.deleteFromCloud(image.getPublicId());
+        try {
+            cloudService.deleteFromCloud(image.getPublicId());
+        } catch (Exception e) {
+            log.warn("Failed to delete image from cloud storage for publicId={}, proceeding with DB deletion", image.getPublicId(), e);
+        }
         productImageRepository.delete(image);
 
         if (wasMain) {

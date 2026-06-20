@@ -229,6 +229,7 @@ public class PromotionServiceImpl implements PromotionService {
                 recalculateProductPrice(p, -1);
                 productRepository.save(p);
             }
+            productService.clearProductListCaches();
             return PromotionResponse.fromEntity(saved);
         }
 

@@ -42,6 +42,7 @@ public class ProductServiceImpl implements ProductService {
     private final InventoryRepository inventoryRepository;
     private final com.example.Sapo_Clone.Repository.CompanyRepository companyRepository;
     private final com.example.Sapo_Clone.Repository.OrderDetailRepository orderDetailRepository;
+    private final com.example.Sapo_Clone.Repository.StoreRepository storeRepository;
     private final org.springframework.cache.CacheManager cacheManager;
 
     @Override
@@ -49,6 +50,22 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse createProduct(ProductCreateDTO dto) {
         int companyId = SecurityUtils.getCurrentCompanyId();
         log.info("Creating product with barcode={} companyId={}", dto.getBarcode(), companyId);
+
+        if (dto.getBarcode() != null && !dto.getBarcode().isEmpty()) {
+            if (!dto.getBarcode().matches("[a-zA-Z0-9-_]+")) {
+                throw new AppException(ErrorCode.VALIDATION_ERROR, "Barcode contains invalid characters (letters, numbers, hyphens, and underscores only)");
+            }
+        }
+
+        if (dto.getSellPriceOriginal() < dto.getImportPrice()) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Original sell price cannot be less than import price");
+        }
+        if (dto.getSellPrice() < dto.getImportPrice()) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Sell price cannot be less than import price");
+        }
+        if (dto.getSellPrice() > dto.getSellPriceOriginal()) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Sell price cannot exceed original sell price");
+        }
 
         if (productRepository.existsByCompany_IdAndBarcode(companyId, dto.getBarcode())) {
             throw new AppException(ErrorCode.BARCODE_ALREADY_EXISTS);
@@ -80,6 +97,19 @@ public class ProductServiceImpl implements ProductService {
         product.setCompany(company);
 
         Product savedProduct = productRepository.save(product);
+
+        // Initialize inventory with 0 quantity for all stores in the company
+        List<Store> stores = storeRepository.findByCompanyId(companyId);
+        if (stores != null) {
+            for (Store store : stores) {
+                Inventory inventory = new Inventory();
+                inventory.setProduct(savedProduct);
+                inventory.setStore(store);
+                inventory.setQuantity(0);
+                inventoryRepository.save(inventory);
+            }
+        }
+
         clearProductListCaches();
         return ProductResponse.fromEntity(savedProduct);
     }
@@ -93,7 +123,9 @@ public class ProductServiceImpl implements ProductService {
         if (product.getStatus() != 1 || product.getCompany() == null || product.getCompany().getId() != companyId) {
             throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
         }
-        return ProductResponse.fromEntityForCustomer(product);
+        ProductResponse response = ProductResponse.fromEntityForCustomer(product);
+        response.setHasStore(inventoryRepository.existsByProductId(productId));
+        return response;
     }
 
     @Override
@@ -105,7 +137,9 @@ public class ProductServiceImpl implements ProductService {
         if (product.getCompany() == null || product.getCompany().getId() != companyId) {
             throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
         }
-        return ProductResponse.fromEntity(product);
+        ProductResponse response = ProductResponse.fromEntity(product);
+        response.setHasStore(inventoryRepository.existsByProductId(productId));
+        return response;
     }
 
     @Override
@@ -123,21 +157,28 @@ public class ProductServiceImpl implements ProductService {
         String search = (keyword == null || keyword.trim().isEmpty()) ? null : keyword.trim();
         List<Integer> categories = (categoryIds == null || categoryIds.isEmpty()) ? null : categoryIds;
 
-        if (search != null && search.matches("\\d+") && categories == null) {
-            int id = Integer.parseInt(search);
-            Optional<Product> opt = productRepository.findById(id);
-            List<ProductResponse> singleResult = new ArrayList<>();
-            opt.ifPresent(c -> {
-                if (c.getCompany() != null && c.getCompany().getId() == companyId) {
-                    singleResult.add(isManage ? ProductResponse.fromEntity(c) : ProductResponse.fromEntityForCustomer(c));
+        if (search != null && search.matches("\\d+") && search.length() < 9 && categories == null) {
+            try {
+                int id = Integer.parseInt(search);
+                Optional<Product> opt = productRepository.findById(id);
+                if (opt.isPresent() && opt.get().getCompany() != null && opt.get().getCompany().getId() == companyId) {
+                    ProductResponse res = isManage ? ProductResponse.fromEntity(opt.get()) : ProductResponse.fromEntityForCustomer(opt.get());
+                    res.setHasStore(inventoryRepository.existsByProductId(opt.get().getId()));
+                    List<ProductResponse> singleResult = List.of(res);
+                    return new PageImpl<>(singleResult, pageable, singleResult.size());
                 }
-            });
-            return new PageImpl<>(singleResult, pageable, singleResult.size());
+            } catch (NumberFormatException e) {
+                // Fall through to regular search
+            }
         }
 
         return productRepository.searchByTextAndCategories(companyId, search, categories, isManage , pageable)
-                .map(product -> isManage ? ProductResponse.fromEntity(product)
-                        : ProductResponse.fromEntityForCustomer(product));
+                .map(product -> {
+                    ProductResponse res = isManage ? ProductResponse.fromEntity(product)
+                            : ProductResponse.fromEntityForCustomer(product);
+                    res.setHasStore(inventoryRepository.existsByProductId(product.getId()));
+                    return res;
+                });
     }
 
     @Override
@@ -149,6 +190,22 @@ public class ProductServiceImpl implements ProductService {
 
         if (product.getCompany() == null || product.getCompany().getId() != companyId) {
             throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+
+        if (dto.getBarcode() != null && !dto.getBarcode().isEmpty()) {
+            if (!dto.getBarcode().matches("[a-zA-Z0-9-_]+")) {
+                throw new AppException(ErrorCode.VALIDATION_ERROR, "Barcode contains invalid characters (letters, numbers, hyphens, and underscores only)");
+            }
+        }
+
+        if (dto.getSellPriceOriginal() < dto.getImportPrice()) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Original sell price cannot be less than import price");
+        }
+        if (dto.getSellPrice() < dto.getImportPrice()) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Sell price cannot be less than import price");
+        }
+        if (dto.getSellPrice() > dto.getSellPriceOriginal()) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Sell price cannot exceed original sell price");
         }
 
         if (productRepository.existsByCompany_IdAndBarcodeAndIdNot(companyId, dto.getBarcode(), productId)) {

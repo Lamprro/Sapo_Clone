@@ -20,6 +20,18 @@ public class PromotionTask {
 
     private final PromotionRepository promotionRepository;
     private final PromotionService promotionService;
+    private final org.springframework.cache.CacheManager cacheManager;
+
+    private void clearProductListCaches() {
+        try {
+            if (cacheManager.getCache("product:list:manage") != null) cacheManager.getCache("product:list:manage").clear();
+            if (cacheManager.getCache("product:list:customer") != null) cacheManager.getCache("product:list:customer").clear();
+            if (cacheManager.getCache("product:store") != null) cacheManager.getCache("product:store").clear();
+            log.info("Cleared product list caches via PromotionTask");
+        } catch (Exception e) {
+            log.warn("Failed to clear product list caches in PromotionTask", e);
+        }
+    }
 
     @Scheduled(fixedRate = 60000) // Run every 1 minute
     @Transactional
@@ -46,6 +58,7 @@ public class PromotionTask {
                 }
             }
             promotionRepository.saveAll(expiredPromotions);
+            clearProductListCaches();
         }
     }
 
@@ -70,6 +83,7 @@ public class PromotionTask {
                     }
                 }
             }
+            clearProductListCaches();
         }
     }
 }

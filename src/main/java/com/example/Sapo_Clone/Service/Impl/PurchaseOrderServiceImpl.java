@@ -134,21 +134,22 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         Integer storeId = null;
         if ("EMPLOYEE".equals(currentRole) || "MANAGER".equals(currentRole)) {
-            storeId = SecurityUtils.getCurrentUser().getStoreId();
-            if (storeId == null || storeId <= 0) {
-                throw new AppException(ErrorCode.FORBIDDEN);
+            Integer currentStoreId = SecurityUtils.getCurrentUser().getStoreId();
+            if (currentStoreId != null && currentStoreId > 0) {
+                storeId = currentStoreId;
             }
         }
 
-        if (storeId != null) {
-            Store store = storeRepository.findById(storeId)
-                    .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
-            if (store.getCompany() == null || store.getCompany().getId() != companyId) {
-                throw new AppException(ErrorCode.FORBIDDEN);
-            }
-        }
         PurchaseOrder order = purchaseOrderRepository.findById(purchaseOrderId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getStore().getCompany().getId() != companyId) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
+        if (storeId != null && order.getStore().getId() != storeId) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
 
         return PurchaseOrderResponse.fromEntity(order);
     }
@@ -160,17 +161,9 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         Integer storeId = null;
         if ("EMPLOYEE".equals(currentRole) || "MANAGER".equals(currentRole)) {
-            storeId = SecurityUtils.getCurrentUser().getStoreId();
-            if (storeId == null || storeId <= 0) {
-                throw new AppException(ErrorCode.FORBIDDEN);
-            }
-        }
-
-        if (storeId != null) {
-            Store store = storeRepository.findById(storeId)
-                    .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
-            if (store.getCompany() == null || store.getCompany().getId() != companyId) {
-                throw new AppException(ErrorCode.FORBIDDEN);
+            Integer currentStoreId = SecurityUtils.getCurrentUser().getStoreId();
+            if (currentStoreId != null && currentStoreId > 0) {
+                storeId = currentStoreId;
             }
         }
 
@@ -197,7 +190,12 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         // LOCK: Cannot change status back from Cancelled
         if (oldStatus == STATUS_CANCELLED) {
-            throw new AppException(ErrorCode.VALIDATION_ERROR);
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Cannot change status of a cancelled Purchase Order");
+        }
+
+        // LOCK: Cannot change status from Completed to Cancelled
+        if (oldStatus == STATUS_COMPLETED && newStatus == STATUS_CANCELLED) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Cannot cancel a completed Purchase Order");
         }
 
         // Logic for Stock Sync
@@ -206,35 +204,6 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             for (PurchaseOrderDetail detail : po.getPurchaseOrderDetails()) {
                 inventoryService.increaseStock(detail.getProduct().getId(), po.getStore().getId(),
                         detail.getQuantity());
-            }
-        } else if (oldStatus == STATUS_COMPLETED && newStatus == STATUS_CANCELLED) {
-            // Transition from Completed to Cancelled -> Decrease Stock (Restoration)
-            try {
-                for (PurchaseOrderDetail detail : po.getPurchaseOrderDetails()) {
-                    inventoryService.decreaseStock(detail.getProduct().getId(), po.getStore().getId(),
-                            detail.getQuantity());
-                }
-            } catch (AppException e) {
-                if (e.getErrorCode() == ErrorCode.INSUFFICIENT_STOCK || e.getErrorCode() == ErrorCode.OUT_OF_STOCK) {
-                    try {
-                        int userId = SecurityUtils.getCurrentUserId();
-                        String productsNames = po.getPurchaseOrderDetails().stream()
-                                .map(d -> d.getProduct().getProductName())
-                                .collect(Collectors.joining(", "));
-                        Notification notif = Notification.builder()
-                                .title("Stock Deduction Failed")
-                                .message("Failed to cancel Purchase Order #" + purchaseOrderId + " because stock of product '" 
-                                        + productsNames + "' would become negative in store '" + po.getStore().getStoreName() + "'.")
-                                .type(NotificationType.INVENTORY_LOW)
-                                .targetUserId(userId)
-                                .companyId(companyId)
-                                .build();
-                        notificationService.createNotification(notif);
-                    } catch (Exception ex) {
-                        log.error("Failed to send stock deduction error notification", ex);
-                    }
-                }
-                throw e;
             }
         }
 

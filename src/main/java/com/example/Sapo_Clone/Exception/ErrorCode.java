@@ -26,6 +26,7 @@ public enum ErrorCode {
     // 403 - Forbidden
     FORBIDDEN(403, "You do not have permission to perform this action"),
     USER_BANNED(403, "Account has been banned, please contact administrator"),
+    EMAIL_CANNOT_BE_CHANGED(400, "Email address cannot be updated for customer accounts"),
 
     // 404 - Not Found
     LOGIN_NOT_FOUND(404, "Incorrect username or password, companyId"),

@@ -36,6 +36,7 @@ public class ProductResponse implements Serializable {
         private List<String> categoryNames;
         private List<ProductImageResponse> images;
         private String mainImage; // Lấy ảnh có status = 2
+        private Boolean hasStore;
 
         public static ProductResponse fromEntity(Product product) {
                 List<ProductImageResponse> imageResponses = null;
@@ -56,6 +57,8 @@ public class ProductResponse implements Serializable {
                         mainImg = mainImageEntity.getImageUrl();
                 }
 
+                boolean hasStoreVal = product.getInventories() != null && product.getInventories().stream().anyMatch(inv -> inv.getQuantity() > 0);
+
                 return ProductResponse.builder()
                                 .id(product.getId())
                                 .productName(product.getProductName())
@@ -74,6 +77,7 @@ public class ProductResponse implements Serializable {
                                                 .map(Category::getCategoryName).collect(Collectors.toList()) : null)
                                 .images(imageResponses)
                                 .mainImage(mainImg)
+                                .hasStore(hasStoreVal)
                                 .build();
         }
 
@@ -100,6 +104,8 @@ public class ProductResponse implements Serializable {
                         mainImg = mainImageEntity != null ? mainImageEntity.getImageUrl() : null;
                 }
 
+                boolean hasStoreVal = product.getInventories() != null && product.getInventories().stream().anyMatch(inv -> inv.getQuantity() > 0);
+
                 return ProductResponse.builder()
                                 .id(product.getId())
                                 .productName(product.getProductName())
@@ -113,6 +119,7 @@ public class ProductResponse implements Serializable {
                                                 .map(Category::getCategoryName).collect(Collectors.toList()) : null)
                                 .images(imageResponses)
                                 .mainImage(mainImg)
+                                .hasStore(hasStoreVal)
                                 .build();
         }
 }

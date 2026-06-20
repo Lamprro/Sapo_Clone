@@ -22,9 +22,11 @@ public interface InventoryRepository extends JpaRepository<Inventory, Integer> {
     // Find all inventory records for a store
     Page<Inventory> findByStore_Id(int storeId, Pageable pageable);
 
+    boolean existsByProductId(int productId);
+
     @Query("SELECT i FROM Inventory i WHERE i.store.id = :storeId " +
-           "AND (:searching IS NULL OR LOWER(i.product.productName) LIKE LOWER(CONCAT('%', :searching, '%')) " +
-           "OR LOWER(i.product.barcode) LIKE LOWER(CONCAT('%', :searching, '%')))")
+           "AND (:searching IS NULL OR LOWER(i.product.productName) LIKE :searching " +
+           "OR LOWER(i.product.barcode) LIKE :searching)")
     Page<Inventory> findByStore_IdAndSearching(@Param("storeId") int storeId, @Param("searching") String searching, Pageable pageable);
 
     // Atomically reserve stock if enough quantity remains.

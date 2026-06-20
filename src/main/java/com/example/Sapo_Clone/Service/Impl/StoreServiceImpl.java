@@ -19,12 +19,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class StoreServiceImpl implements StoreService {
     private final StoreRepository storeRepository;
     private final CompanyRepository companyRepository;
@@ -62,6 +64,9 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public Page<StoreResponse> getList(String keyword, int page, int size) {
         int companyId = SecurityUtils.getCurrentCompanyId();
+        if ("ADMIN".equals(SecurityUtils.getCurrentRole())) {
+            companyId = 0;
+        }
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return storeRepository.searchStores(companyId, keyword, pageable).map(StoreResponse::fromEntity);
     }

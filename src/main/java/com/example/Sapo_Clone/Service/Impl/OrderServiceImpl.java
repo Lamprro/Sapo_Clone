@@ -526,9 +526,7 @@ public class OrderServiceImpl implements OrderService {
                 inventoryService.increaseStock(detail.getProduct().getId(), order.getStore().getId(),
                         detail.getQuantity());
             }
-            if (order.getPaymentStatus() == PAYMENT_PAID) {
-                order.setPaymentStatus(PAYMENT_REFUNDED);
-            }
+            // Do not automatically set PAYMENT_REFUNDED - manager must trigger manually via refund button
             if (order.getRedeemPoint() > 0) {
                 User customer = order.getCustomer();
                 Point customerPoint = customer.getPoint();
@@ -539,10 +537,7 @@ public class OrderServiceImpl implements OrderService {
             }
         } else if (newStatus == STATUS_ERROR && oldStatus != STATUS_ERROR) {
             // Không hoàn kho vì hàng lỗi.
-            // Nếu khách đã thanh toán thì chuyển qua hoàn tiền
-            if (order.getPaymentStatus() == PAYMENT_PAID) {
-                order.setPaymentStatus(PAYMENT_REFUNDED);
-            }
+            // Do not automatically set PAYMENT_REFUNDED - manager must trigger manually via refund button
             if (order.getRedeemPoint() > 0) {
                 User customer = order.getCustomer();
                 Point customerPoint = customer.getPoint();
@@ -594,7 +589,29 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException(ErrorCode.ORDER_NOT_FOUND);
         }
 
-        order.setPaymentStatus(dto.getPaymentStatus());
+        int currentPaymentStatus = order.getPaymentStatus();
+        int newPaymentStatus = dto.getPaymentStatus();
+
+        // 1. If order is cancelled and current payment is unpaid: lock unpaid status.
+        if (order.getStatus() == STATUS_CANCELLED && currentPaymentStatus == PAYMENT_UNPAID) {
+            throw new AppException(ErrorCode.ORDER_LOCKED);
+        }
+
+        // 2. If already refunded: fully locked.
+        if (currentPaymentStatus == PAYMENT_REFUNDED) {
+            throw new AppException(ErrorCode.ORDER_LOCKED);
+        }
+
+        // 3. If already paid: can only transition to refunded if order is cancelled or error.
+        if (currentPaymentStatus == PAYMENT_PAID) {
+            if (newPaymentStatus == PAYMENT_REFUNDED && (order.getStatus() == STATUS_CANCELLED || order.getStatus() == STATUS_ERROR)) {
+                // Allowed transition
+            } else {
+                throw new AppException(ErrorCode.ORDER_LOCKED);
+            }
+        }
+
+        order.setPaymentStatus(newPaymentStatus);
         Order savedOrder = orderRepository.save(order);
 
         // Notify Customer about payment status change

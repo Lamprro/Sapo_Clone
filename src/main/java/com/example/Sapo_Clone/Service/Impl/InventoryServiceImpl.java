@@ -5,12 +5,11 @@ import com.example.Sapo_Clone.DTO.Response.Product.ProductInventoryResponse;
 import com.example.Sapo_Clone.Entity.Inventory;
 import com.example.Sapo_Clone.Entity.Product;
 import com.example.Sapo_Clone.Entity.Store;
+import com.example.Sapo_Clone.Entity.User;
+import com.example.Sapo_Clone.Entity.ProductImage;
 import com.example.Sapo_Clone.Exception.AppException;
 import com.example.Sapo_Clone.Exception.ErrorCode;
-import com.example.Sapo_Clone.Repository.InventoryRepository;
-import com.example.Sapo_Clone.Repository.ProductImageRepository;
-import com.example.Sapo_Clone.Repository.ProductRepository;
-import com.example.Sapo_Clone.Repository.StoreRepository;
+import com.example.Sapo_Clone.Repository.*;
 import com.example.Sapo_Clone.Service.InventoryService;
 import com.example.Sapo_Clone.Utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +20,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -30,13 +31,17 @@ public class InventoryServiceImpl implements InventoryService {
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
     private final ProductImageRepository productImageRepository;
+    private final UserRepository userRepository;
 
     @Override
     public ProductInventoryResponse getInventory(int productId, Integer storeId) {
         if (storeId == null || storeId <= 0) {
             String currentRole = SecurityUtils.getCurrentRole();
             if ("EMPLOYEE".equals(currentRole) || "MANAGER".equals(currentRole)) {
-                storeId = SecurityUtils.getCurrentStoreId();
+                // Get real-time storeId from database
+                int userId = SecurityUtils.getCurrentUserId();
+                User user = userRepository.findById(userId).orElse(null);
+                storeId = (user != null && user.getStore() != null) ? user.getStore().getId() : null;
             }
         }
 
@@ -61,16 +66,22 @@ public class InventoryServiceImpl implements InventoryService {
         int companyId = SecurityUtils.getCurrentCompanyId();
         String currentRole = SecurityUtils.getCurrentRole();
 
-        // If employee/manager, force their own store
-        if ("EMPLOYEE".equals(currentRole) || "MANAGER".equals(currentRole)) {
-            storeId = SecurityUtils.getCurrentUser().getStoreId();
+        // Get real-time storeId from database for employee/manager
+        int userId = SecurityUtils.getCurrentUserId();
+        User user = userRepository.findById(userId).orElse(null);
+        int userStoreId = (user != null && user.getStore() != null) ? user.getStore().getId() : 0;
+
+        if ("EMPLOYEE".equals(currentRole) || ("MANAGER".equals(currentRole) && userStoreId > 0)) {
+            storeId = userStoreId;
         }
 
         if (storeId == null || storeId <= 0) {
             throw new AppException(ErrorCode.STORE_NOT_FOUND);
         }
 
-        log.info("Fetching inventory for storeId={} requesterRole={} companyId={}", storeId, currentRole, companyId);
+        log.info("Fetching inventory for storeId={} requesterRole={} companyId={} userStoreId={}", storeId, currentRole, companyId, userStoreId);
+        java.util.List<Store> allStores = storeRepository.findAll();
+        log.info("All stores in database: {}", allStores.stream().map(s -> "ID=" + s.getId() + ", Name=" + s.getStoreName() + ", CompanyID=" + (s.getCompany() != null ? s.getCompany().getId() : "null")).collect(java.util.stream.Collectors.toList()));
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
@@ -79,18 +90,26 @@ public class InventoryServiceImpl implements InventoryService {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        return inventoryRepository.findByStore_IdAndSearching(storeId, searching, pageable)
-                .map(inv -> InventoryByStoreResponse.builder()
-                        .productId(inv.getProduct().getId())
-                        .barcode(inv.getProduct().getBarcode())
-                        .productName(inv.getProduct().getProductName())
-                        .mainImage(productRepository.getById(inv.getProduct().getId()).getProductImages().stream()
+        String searchPattern = (searching == null || searching.trim().isEmpty()) ? null : "%" + searching.trim().toLowerCase() + "%";
+        return inventoryRepository.findByStore_IdAndSearching(storeId, searchPattern, pageable)
+                .map(inv -> {
+                    List<ProductImage> images = productImageRepository.findByProduct_Id(inv.getProduct().getId());
+                    String mainImg = null;
+                    if (images != null && !images.isEmpty()) {
+                        mainImg = images.stream()
                                 .filter(img -> img.getStatus() == 2)
                                 .findFirst()
-                                .map(img -> img.getImageUrl())
-                                .orElse(null))
-                        .quantity(inv.getQuantity())
-                        .build());
+                                .map(ProductImage::getImageUrl)
+                                .orElse(images.get(0).getImageUrl());
+                    }
+                    return InventoryByStoreResponse.builder()
+                            .productId(inv.getProduct().getId())
+                            .barcode(inv.getProduct().getBarcode())
+                            .productName(inv.getProduct().getProductName())
+                            .mainImage(mainImg)
+                            .quantity(inv.getQuantity())
+                            .build();
+                });
     }
 
     @Override
