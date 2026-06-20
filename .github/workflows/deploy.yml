@@ -8,6 +8,21 @@ jobs:
   deploy:
     runs-on: self-hosted
 
+    # Khai báo toàn bộ secrets thành biến môi trường cho JOB
+    # Đây là cách CHUẨN để truyền secrets trong GitHub Actions
+    env:
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      GOONG_API_KEY: ${{ secrets.GOONG_API_KEY }}
+      MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+      ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+
     steps:
       - name: 1. Kéo code mới nhất từ GitHub về máy chủ
         uses: actions/checkout@v4
@@ -18,42 +33,75 @@ jobs:
           distribution: 'temurin'
           java-version: '22'
 
-      - name: 2.3 Tự động tạo file .env từ GitHub Secrets
+      - name: 3. Tạo file .env từ GitHub Secrets
         shell: powershell
         run: |
-          echo "DB_URL=${{ secrets.DB_URL }}" > .env
-          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-          echo "CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}" >> .env
-          echo "CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" >> .env
-          echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env
-          echo "GOONG_API_KEY=${{ secrets.GOONG_API_KEY }}" >> .env
-          echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
-          echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
-          echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >> .env
+          # Dùng Set-Content để tránh lỗi encoding BOM của PowerShell
+          # Không dùng echo >> vì có thể thêm ký tự lạ vào file
+          $lines = @(
+            "DB_URL=$env:DB_URL",
+            "DB_USERNAME=$env:DB_USERNAME",
+            "DB_PASSWORD=$env:DB_PASSWORD",
+            "JWT_SECRET=$env:JWT_SECRET",
+            "CLOUDINARY_CLOUD_NAME=$env:CLOUDINARY_CLOUD_NAME",
+            "CLOUDINARY_API_KEY=$env:CLOUDINARY_API_KEY",
+            "CLOUDINARY_API_SECRET=$env:CLOUDINARY_API_SECRET",
+            "GOONG_API_KEY=$env:GOONG_API_KEY",
+            "MAIL_USERNAME=$env:MAIL_USERNAME",
+            "MAIL_PASSWORD=$env:MAIL_PASSWORD",
+            "ALLOWED_ORIGINS=$env:ALLOWED_ORIGINS"
+          )
+          # Encoding ASCII để Spring Boot đọc đúng, không có BOM
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) ".env"), $lines, [System.Text.UTF8Encoding]::new($false))
+          Write-Host "Da tao file .env thanh cong!"
 
-      - name: 2.4 Debug - Kiểm tra file .env (Quan trọng)
+      - name: 4. Kiểm tra .env (che giá trị, chỉ hiện key)
         shell: powershell
         run: |
-          Write-Host "--- Nội dung file .env hiện tại ---"
-          Get-Content .env
-          Write-Host "----------------------------------"
+          Write-Host "--- Cac bien trong .env ---"
+          Get-Content .env | ForEach-Object {
+            $parts = $_ -split '=', 2
+            if ($parts.Length -eq 2) {
+              $val = if ($parts[1].Length -gt 4) { $parts[1].Substring(0,4) + "****" } else { "****" }
+              Write-Host "$($parts[0])=$val"
+            }
+          }
+          Write-Host "---------------------------"
 
-      - name: 3. Dừng server cũ
+      - name: 5. Dừng server cũ (giải phóng file JAR đang bị khóa)
         run: taskkill /F /IM java.exe /T
         continue-on-error: true
 
-      - name: 4. Đóng gói dự án (Build file JAR)
+      - name: 6. Đóng gói dự án (Build file JAR)
         run: .\mvnw.cmd clean package -DskipTests
 
-      - name: 5. Khởi động ứng dụng (Ép đọc .env qua tham số)
+      - name: 7. Khởi động lại máy chủ Backend
         shell: powershell
         run: |
-          $envPath = (Get-Location).Path + "\.env"
-          $jarPath = "target\Sapo_Clone-0.0.1-SNAPSHOT.jar"
-          
-          # Truyền tham số để đảm bảo Spring Boot load đúng file .env
-          $argList = @("-jar", $jarPath, "--spring.config.import=optional:file:$envPath")
-          
-          Start-Process -FilePath "java" -ArgumentList $argList -WorkingDirectory (Get-Location).Path -RedirectStandardOutput "full_log.txt" -RedirectStandardError "error_log.txt"
+          # Tìm file jar động (không hardcode tên)
+          $jarFile = Get-ChildItem -Path target\*.jar -Exclude "*sources*","*javadoc*" | Select-Object -First 1
+          if (-not $jarFile) {
+              Write-Error "Khong tim thay file .jar trong thu muc target!"
+              exit 1
+          }
+
+          $workDir = (Get-Location).Path
+          $envFile = Join-Path $workDir ".env"
+
+          Write-Host "Chay jar: $($jarFile.FullName)"
+          Write-Host "Thu muc lam viec: $workDir"
+          Write-Host "File .env: $envFile"
+
+          # Xoa tracking de GitHub Runner khong kill process sau khi job ket thuc
+          $env:RUNNER_TRACKING_ID = $null
+
+          Start-Process `
+            -FilePath "java" `
+            -ArgumentList @(
+              "-jar", "`"$($jarFile.FullName)`"",
+              "--spring.config.import=optional:file:$envFile[.properties]"
+            ) `
+            -WorkingDirectory $workDir `
+            -WindowStyle Hidden
+
+          Write-Host "Backend da khoi dong thanh cong!"
