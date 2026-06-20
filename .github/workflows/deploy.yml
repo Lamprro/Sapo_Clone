@@ -17,6 +17,19 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '22'
+      - name: 2.3 Tự động tạo file .env từ GitHub Secrets
+        shell: powershell
+        run: |
+            echo "DB_URL=${{ secrets.DB_URL }}" > .env
+            echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+            echo "CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}" >> .env
+            echo "CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" >> .env
+            echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env
+            echo "GOONG_API_KEY=${{ secrets.GOONG_API_KEY }}" >> .env
+            echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
+            echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
 
       - name: 3. Dừng server cũ (giải phóng file JAR đang bị khóa)
         run: taskkill /F /IM java.exe /T
