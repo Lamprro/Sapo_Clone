@@ -2,16 +2,14 @@ name: Deploy Backend Sapo_Clone
 
 on:
   push:
-    branches: [ "main" ] # Sửa lại thành 'master' hoặc nhánh bạn đang code nếu cần
-    # paths:
-    #   - 'backend/**' # Nếu code backend nằm trong thư mục riêng, hãy bỏ dấu # ở 2 dòng này và sửa tên thư mục
+    branches: [ "main" ]
 
 jobs:
   deploy:
-    runs-on: self-hosted # Ra lệnh cho GitHub gửi việc về Máy B của bạn
+    runs-on: self-hosted
 
     steps:
-      - name: 1. Kéo code mới nhất từ GitHub về Máy B
+      - name: 1. Kéo code mới nhất từ GitHub về máy chủ
         uses: actions/checkout@v4
 
       - name: 2. Thiết lập môi trường Java 22
@@ -20,26 +18,37 @@ jobs:
           distribution: 'temurin'
           java-version: '22'
 
-      - name: 2.5 Dừng server cũ (Giải phóng file JAR đang bị khóa)
+      - name: 3. Dừng server cũ (giải phóng file JAR đang bị khóa)
         run: taskkill /F /IM java.exe /T
         continue-on-error: true
 
-      - name: 3. Đóng gói dự án (Build file JAR)
+      - name: 4. Đóng gói dự án (Build file JAR)
         run: .\mvnw.cmd clean package -DskipTests
 
-      - name: 3. Đóng gói dự án (Build file JAR)
-        run: .\mvnw.cmd clean package -DskipTests
-
-      - name: 4. Khởi động lại máy chủ Backend
+      - name: 5. Tạo file .env từ GitHub Secrets
         shell: powershell
         run: |
-          # Dừng tiến trình Java cũ đang chạy (nếu có)
-          Stop-Process -Name java -Force -ErrorAction SilentlyContinue
-          
-          # Tìm file .jar mới trong thư mục target
+          $envContent = @"
+          DB_URL=${{ secrets.DB_URL }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+          GOONG_API_KEY=${{ secrets.GOONG_API_KEY }}
+          MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+          ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+          "@
+          $envContent | Out-File -FilePath ".env" -Encoding UTF8 -NoNewline
+          Write-Host "Da tao file .env thanh cong!"
+
+      - name: 6. Khởi động lại máy chủ Backend
+        shell: powershell
+        run: |
           $jarFile = Get-ChildItem -Path target\*.jar | Select-Object -First 1
           if ($jarFile) {
-              # Xóa tracking ID để GitHub Runner không kill tiến trình chạy ngầm sau khi job kết thúc
               $env:RUNNER_TRACKING_ID = $null
               Start-Process -FilePath "java" -ArgumentList "-jar `"$($jarFile.FullName)`"" -WindowStyle Hidden
               Write-Host "Da khoi dong lai Backend: $($jarFile.Name) thanh cong!"
@@ -47,8 +56,3 @@ jobs:
               Write-Error "Khong tim thay file jar trong thu muc target!"
               exit 1
           }
-      - name: 55. Khởi động ứng dụng và kiểm tra đường dẫn
-        run: |
-            echo "Thư mục hiện tại là: "
-            pwd
-            Start-Process -FilePath "java" -ArgumentList "-jar target/tên_file_của_bạn.jar" -WorkingDirectory (Get-Location).Path -RedirectStandardOutput "log.txt"
