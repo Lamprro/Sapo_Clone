@@ -38,6 +38,18 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success("Success", notifications));
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<ApiResponse<java.util.List<Notification>>> getAllMyNotifications() {
+        int userId = SecurityUtils.getCurrentUserId();
+        String role = SecurityUtils.getCurrentRole();
+        int companyId = SecurityUtils.getCurrentCompanyId();
+        
+        log.info("Fetching ALL notifications for userId={}, role={}, companyId={}", userId, role, companyId);
+        
+        java.util.List<Notification> notifications = notificationService.getAllNotificationsForUser(userId, role, companyId);
+        return ResponseEntity.ok(ApiResponse.success("Success", notifications));
+    }
+
     @PatchMapping("/{id}/read")
     public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable int id) {
         notificationService.markAsRead(id);

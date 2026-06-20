@@ -74,4 +74,10 @@ public class NotificationServiceImpl implements NotificationService {
         pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "createdAt"));
         return notificationRepository.findByUserAndCompany(userId, role, companyId, pageable);
     }
+
+    @Override
+    public java.util.List<Notification> getAllNotificationsForUser(int userId, String role, int companyId) {
+        log.info("Fetching ALL notifications for userId={}, role='{}', companyId={}", userId, role, companyId);
+        return notificationRepository.findAllByUserAndCompany(userId, role, companyId);
+    }
 }
