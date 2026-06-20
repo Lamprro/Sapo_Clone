@@ -17,55 +17,35 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '22'
+
       - name: 2.3 Tự động tạo file .env từ GitHub Secrets
         shell: powershell
         run: |
-            echo "DB_URL=${{ secrets.DB_URL }}" > .env
-            echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
-            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-            echo "CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}" >> .env
-            echo "CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" >> .env
-            echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env
-            echo "GOONG_API_KEY=${{ secrets.GOONG_API_KEY }}" >> .env
-            echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
-            echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+          echo "DB_URL=${{ secrets.DB_URL }}" > .env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}" >> .env
+          echo "CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" >> .env
+          echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env
+          echo "GOONG_API_KEY=${{ secrets.GOONG_API_KEY }}" >> .env
+          echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
+          echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+          echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >> .env
 
-      - name: 3. Dừng server cũ (giải phóng file JAR đang bị khóa)
+      - name: 3. Dừng server cũ
         run: taskkill /F /IM java.exe /T
         continue-on-error: true
 
       - name: 4. Đóng gói dự án (Build file JAR)
         run: .\mvnw.cmd clean package -DskipTests
 
-      - name: 5. Khởi động ứng dụng (Chạy nền)
+      - name: 5. Khởi động ứng dụng (Chạy ngầm với cấu hình đầy đủ)
         shell: powershell
         run: |
-            $argList = "-jar target/Sapo_Clone-0.0.1-SNAPSHOT.jar",
-                       "-DDB_URL=${{ secrets.DB_URL }}",
-                       "-DDB_USERNAME=${{ secrets.DB_USERNAME }}",
-                       "-DDB_PASSWORD=${{ secrets.DB_PASSWORD }}",
-                       "-DJWT_SECRET=${{ secrets.JWT_SECRET }}",
-                       "-DCLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}",
-                       "-DCLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}",
-                       "-DCLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}",
-                       "-DGOONG_API_KEY=${{ secrets.GOONG_API_KEY }}",
-                       "-DMAIL_USERNAME=${{ secrets.MAIL_USERNAME }}",
-                       "-DMAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}",
-                       "-DALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}"
-            
-            Start-Process -FilePath "java" -ArgumentList $argList -WorkingDirectory (Get-Location).Path -RedirectStandardOutput "full_log.txt" -RedirectStandardError "error_log.txt"
-
-
-      - name: 6. Khởi động lại máy chủ Backend
-        shell: powershell
-        run: |
-          $jarFile = Get-ChildItem -Path target\*.jar | Select-Object -First 1
-          if ($jarFile) {
-              $env:RUNNER_TRACKING_ID = $null
-              Start-Process -FilePath "java" -ArgumentList "-jar `"$($jarFile.FullName)`"" -WindowStyle Hidden
-              Write-Host "Da khoi dong lai Backend: $($jarFile.Name) thanh cong!"
-          } else {
-              Write-Error "Khong tim thay file jar trong thu muc target!"
-              exit 1
-          }
+          $jarPath = "target\Sapo_Clone-0.0.1-SNAPSHOT.jar"
+          # Mảng các tham số khởi động
+          $argList = @("-jar", $jarPath)
+          
+          # Khởi động tiến trình và hướng log ra file để bạn debug
+          Start-Process -FilePath "java" -ArgumentList $argList -WorkingDirectory (Get-Location).Path -RedirectStandardOutput "full_log.txt" -RedirectStandardError "error_log.txt"
