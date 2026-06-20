@@ -38,24 +38,27 @@ jobs:
       - name: 4. Đóng gói dự án (Build file JAR)
         run: .\mvnw.cmd clean package -DskipTests
 
-      - name: 5. Tạo file .env từ GitHub Secrets
+      - name: 4. Khởi động và xuất log chi tiết
         shell: powershell
         run: |
-          $envContent = @"
-          DB_URL=${{ secrets.DB_URL }}
-          DB_USERNAME=${{ secrets.DB_USERNAME }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
-          CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
-          CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
-          GOONG_API_KEY=${{ secrets.GOONG_API_KEY }}
-          MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
-          MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
-          ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
-          "@
-          $envContent | Out-File -FilePath ".env" -Encoding UTF8 -NoNewline
-          Write-Host "Da tao file .env thanh cong!"
+            # Đảm bảo chúng ta đang ở đúng nơi chứa file .env
+            cd "C:\Users\Admin\actions-runner\_work\Sapo_Clone\Sapo_Clone\"
+            
+            # Chạy Java và ép buộc nó nạp biến môi trường từ hệ điều hành 
+            # (Cách này an toàn hơn là trông chờ nó đọc file .env)
+            java -jar target/Sapo_Clone-0.0.1-SNAPSHOT.jar `
+              -DDB_URL="${{ secrets.DB_URL }}" `
+              -DDB_USERNAME="${{ secrets.DB_USERNAME }}" `
+              -DDB_PASSWORD="${{ secrets.DB_PASSWORD }}" `
+              -DJWT_SECRET="${{ secrets.JWT_SECRET }}" `
+              -DCLOUDINARY_CLOUD_NAME="${{ secrets.CLOUDINARY_CLOUD_NAME }}" `
+              -DCLOUDINARY_API_KEY="${{ secrets.CLOUDINARY_API_KEY }}" `
+              -DCLOUDINARY_API_SECRET="${{ secrets.CLOUDINARY_API_SECRET }}" `
+              -DGOONG_API_KEY="${{ secrets.GOONG_API_KEY }}" `
+              -DMAIL_USERNAME="${{ secrets.MAIL_USERNAME }}" `
+              -DMAIL_PASSWORD="${{ secrets.MAIL_PASSWORD }}" `
+              -DALLOWED_ORIGINS="${{ secrets.ALLOWED_ORIGINS }}" `
+              > full_log.txt 2>&1
 
       - name: 6. Khởi động lại máy chủ Backend
         shell: powershell
