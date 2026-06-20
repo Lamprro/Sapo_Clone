@@ -20,6 +20,13 @@ jobs:
           distribution: 'temurin'
           java-version: '22'
 
+      - name: 2.5 Dừng server cũ (Giải phóng file JAR đang bị khóa)
+        run: taskkill /F /IM java.exe /T
+        continue-on-error: true
+
+      - name: 3. Đóng gói dự án (Build file JAR)
+        run: .\mvnw.cmd clean package -DskipTests
+
       - name: 3. Đóng gói dự án (Build file JAR)
         run: .\mvnw.cmd clean package -DskipTests
 
