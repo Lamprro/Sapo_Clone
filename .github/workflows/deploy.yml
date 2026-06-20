@@ -33,6 +33,13 @@ jobs:
           echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
           echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >> .env
 
+      - name: 2.4 Debug - Kiểm tra file .env (Quan trọng)
+        shell: powershell
+        run: |
+          Write-Host "--- Nội dung file .env hiện tại ---"
+          Get-Content .env
+          Write-Host "----------------------------------"
+
       - name: 3. Dừng server cũ
         run: taskkill /F /IM java.exe /T
         continue-on-error: true
@@ -40,12 +47,13 @@ jobs:
       - name: 4. Đóng gói dự án (Build file JAR)
         run: .\mvnw.cmd clean package -DskipTests
 
-      - name: 5. Khởi động ứng dụng (Chạy ngầm với cấu hình đầy đủ)
+      - name: 5. Khởi động ứng dụng (Ép đọc .env qua tham số)
         shell: powershell
         run: |
+          $envPath = (Get-Location).Path + "\.env"
           $jarPath = "target\Sapo_Clone-0.0.1-SNAPSHOT.jar"
-          # Mảng các tham số khởi động
-          $argList = @("-jar", $jarPath)
           
-          # Khởi động tiến trình và hướng log ra file để bạn debug
+          # Truyền tham số để đảm bảo Spring Boot load đúng file .env
+          $argList = @("-jar", $jarPath, "--spring.config.import=optional:file:$envPath")
+          
           Start-Process -FilePath "java" -ArgumentList $argList -WorkingDirectory (Get-Location).Path -RedirectStandardOutput "full_log.txt" -RedirectStandardError "error_log.txt"
