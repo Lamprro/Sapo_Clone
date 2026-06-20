@@ -25,6 +25,11 @@ public class JwtFilter extends OncePerRequestFilter {
     private final com.example.Sapo_Clone.Service.TokenBlacklistService tokenBlacklistService;
 
     @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        return request.getRequestURI().startsWith("/ws");
+    }
+
+    @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
