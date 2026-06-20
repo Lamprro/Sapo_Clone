@@ -47,3 +47,8 @@ jobs:
               Write-Error "Khong tim thay file jar trong thu muc target!"
               exit 1
           }
+      - name: 55. Khởi động ứng dụng và kiểm tra đường dẫn
+        run: |
+            echo "Thư mục hiện tại là: "
+            pwd
+            Start-Process -FilePath "java" -ArgumentList "-jar target/tên_file_của_bạn.jar" -WorkingDirectory (Get-Location).Path -RedirectStandardOutput "log.txt"
