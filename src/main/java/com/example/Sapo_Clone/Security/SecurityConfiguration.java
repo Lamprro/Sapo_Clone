@@ -84,6 +84,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/unit/**").permitAll()
 
                 // User management
+                // forgot-password: PUBLIC — user chưa đăng nhập nên không có token
+                .requestMatchers(HttpMethod.PATCH, "/api/user/forgot-password").permitAll()
                 .requestMatchers(HttpMethod.PUT, "/api/user/profile").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/api/user/password").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/user/**").hasAnyRole("ADMIN", "MANAGER")
