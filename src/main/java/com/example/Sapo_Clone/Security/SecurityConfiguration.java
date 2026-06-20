@@ -61,7 +61,11 @@ public class SecurityConfiguration {
         // 1. CORS
         http.cors(cors -> cors.configurationSource(request -> {
             CorsConfiguration corsConfig = new CorsConfiguration();
-            corsConfig.setAllowedOriginPatterns(allowedOrigins);
+            if (request.getRequestURI().startsWith("/ws")) {
+                corsConfig.setAllowedOriginPatterns(List.of("*"));
+            } else {
+                corsConfig.setAllowedOriginPatterns(allowedOrigins);
+            }
             corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
             corsConfig.addAllowedHeader("*");
             corsConfig.setAllowCredentials(true);

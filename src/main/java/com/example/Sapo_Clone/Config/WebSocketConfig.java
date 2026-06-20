@@ -12,7 +12,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Endpoint for clients to connect
+        // Raw WebSocket endpoint used by the Flutter STOMP clients.
+        registry.addEndpoint("/ws/websocket")
+                .setAllowedOriginPatterns("*");
+
+        // SockJS endpoint for clients that need SockJS fallback transports.
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
