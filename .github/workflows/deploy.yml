@@ -91,21 +91,56 @@ jobs:
 
           $workDir = (Get-Location).Path
           $envFile = Join-Path $workDir ".env"
+          $logDir = Join-Path $workDir "logs"
+          New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+          $outLog = Join-Path $logDir "backend-out.log"
+          $errLog = Join-Path $logDir "backend-error.log"
+          $pidFile = Join-Path $logDir "backend.pid"
+          $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+
+          if (Test-Path $outLog) {
+              Move-Item -Force $outLog (Join-Path $logDir "backend-out-$timestamp.log")
+          }
+          if (Test-Path $errLog) {
+              Move-Item -Force $errLog (Join-Path $logDir "backend-error-$timestamp.log")
+          }
 
           Write-Host "Chay jar: $($jarFile.FullName)"
           Write-Host "Thu muc lam viec: $workDir"
           Write-Host "File .env: $envFile"
+          Write-Host "Log stdout: $outLog"
+          Write-Host "Log stderr: $errLog"
 
           # Xoa tracking de GitHub Runner khong kill process sau khi job ket thuc
           $env:RUNNER_TRACKING_ID = $null
 
-          Start-Process `
+          $process = Start-Process `
             -FilePath "java" `
             -ArgumentList @(
               "-jar", "`"$($jarFile.FullName)`"",
               "--spring.config.import=optional:file:$envFile[.properties]"
             ) `
             -WorkingDirectory $workDir `
-            -WindowStyle Hidden
+            -RedirectStandardOutput $outLog `
+            -RedirectStandardError $errLog `
+            -WindowStyle Hidden `
+            -PassThru
+
+          Set-Content -Path $pidFile -Value $process.Id -Encoding UTF8
+          Write-Host "Backend PID: $($process.Id)"
+          Write-Host "PID file: $pidFile"
+
+          Start-Sleep -Seconds 5
+          if ($process.HasExited) {
+              Write-Error "Backend vua khoi dong da bi dung. ExitCode=$($process.ExitCode)"
+              Write-Host "--- backend-out.log ---"
+              if (Test-Path $outLog) { Get-Content $outLog -Tail 100 }
+              Write-Host "--- backend-error.log ---"
+              if (Test-Path $errLog) { Get-Content $errLog -Tail 100 }
+              exit 1
+          }
 
           Write-Host "Backend da khoi dong thanh cong!"
+          Write-Host "Dung lenh sau tren may runner de xem log truc tiep:"
+          Write-Host "Get-Content `"$outLog`" -Wait -Tail 200"
