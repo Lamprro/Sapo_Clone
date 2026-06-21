@@ -113,7 +113,8 @@ jobs:
           Write-Host "Log stderr: $errLog"
 
           # Xoa tracking de GitHub Runner khong kill process sau khi job ket thuc
-          $env:RUNNER_TRACKING_ID = $null
+          $env:RUNNER_TRACKING_ID = ""
+          [Environment]::SetEnvironmentVariable("RUNNER_TRACKING_ID", "", "Process")
 
           $process = Start-Process `
             -FilePath "java" `
@@ -131,16 +132,42 @@ jobs:
           Write-Host "Backend PID: $($process.Id)"
           Write-Host "PID file: $pidFile"
 
-          Start-Sleep -Seconds 5
-          if ($process.HasExited) {
-              Write-Error "Backend vua khoi dong da bi dung. ExitCode=$($process.ExitCode)"
+          $portReady = $false
+          for ($i = 1; $i -le 60; $i++) {
+              if ($process.HasExited) {
+                  Write-Error "Backend vua khoi dong da bi dung. ExitCode=$($process.ExitCode)"
+                  Write-Host "--- backend-out.log ---"
+                  if (Test-Path $outLog) { Get-Content $outLog -Tail 150 }
+                  Write-Host "--- backend-error.log ---"
+                  if (Test-Path $errLog) { Get-Content $errLog -Tail 150 }
+                  exit 1
+              }
+
+              $connection = Test-NetConnection -ComputerName "127.0.0.1" -Port 8080 -WarningAction SilentlyContinue
+              if ($connection.TcpTestSucceeded) {
+                  $portReady = $true
+                  break
+              }
+
+              Write-Host "Dang doi backend mo cong 8080... lan $i/60"
+              Start-Sleep -Seconds 2
+          }
+
+          if (-not $portReady) {
+              Write-Error "Backend process con song nhung cong 8080 chua mo sau 120 giay."
               Write-Host "--- backend-out.log ---"
-              if (Test-Path $outLog) { Get-Content $outLog -Tail 100 }
+              if (Test-Path $outLog) { Get-Content $outLog -Tail 200 }
               Write-Host "--- backend-error.log ---"
-              if (Test-Path $errLog) { Get-Content $errLog -Tail 100 }
+              if (Test-Path $errLog) { Get-Content $errLog -Tail 200 }
+              if (Get-Command jcmd -ErrorAction SilentlyContinue) {
+                  $threadDump = Join-Path $logDir "thread-dump-$timestamp.txt"
+                  jcmd $process.Id Thread.print | Out-File -FilePath $threadDump -Encoding UTF8
+                  Write-Host "Thread dump: $threadDump"
+              }
               exit 1
           }
 
           Write-Host "Backend da khoi dong thanh cong!"
+          Write-Host "Cong 8080 da san sang."
           Write-Host "Dung lenh sau tren may runner de xem log truc tiep:"
           Write-Host "Get-Content `"$outLog`" -Wait -Tail 200"
