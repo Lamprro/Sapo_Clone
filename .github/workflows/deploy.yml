@@ -113,29 +113,39 @@ jobs:
           Write-Host "Log stderr: $errLog"
 
           # Xoa tracking de GitHub Runner khong kill process sau khi job ket thuc
-          $env:RUNNER_TRACKING_ID = ""
-          [Environment]::SetEnvironmentVariable("RUNNER_TRACKING_ID", "", "Process")
+          Remove-Item env:RUNNER_TRACKING_ID -ErrorAction SilentlyContinue
+          $env:RUNNER_TRACKING_ID = $null
+          [Environment]::SetEnvironmentVariable("RUNNER_TRACKING_ID", $null, "Process")
 
-          $process = Start-Process `
-            -FilePath "java" `
-            -ArgumentList @(
-              "-jar", "`"$($jarFile.FullName)`"",
-              "--spring.config.import=optional:file:$envFile[.properties]"
-            ) `
-            -WorkingDirectory $workDir `
-            -RedirectStandardOutput $outLog `
-            -RedirectStandardError $errLog `
-            -WindowStyle Hidden `
-            -PassThru
+          # Chay Java thong qua WMI (Win32_Process) de tach biet hoan toan khoi cay tien trinh cua GitHub Runner.
+          # Dieu nay dam bao ung dung Java khong bi tat khi Runner thuc hien cleanup don dep tien trinh o cuoi Job.
+          $cmdLine = "cmd.exe /c `"java -jar `"$($jarFile.FullName)`" --spring.config.import=optional:file:`"$envFile`"[.properties] > `"$outLog`" 2> `"$errLog`"`""
+          Write-Host "Khoi dong backend bang WMI: $cmdLine"
 
-          Set-Content -Path $pidFile -Value $process.Id -Encoding UTF8
-          Write-Host "Backend PID: $($process.Id)"
+          $wmiResult = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
+              CommandLine = $cmdLine
+              CurrentDirectory = $workDir
+          }
+
+          if ($wmiResult.ReturnValue -ne 0) {
+              Write-Error "Khong the khoi dong backend qua WMI. ReturnValue=$($wmiResult.ReturnValue)"
+              exit 1
+          }
+
+          $processId = $wmiResult.ProcessId
+          Set-Content -Path $pidFile -Value $processId -Encoding UTF8
+          Write-Host "Backend PID: $processId"
           Write-Host "PID file: $pidFile"
+
+          # Lay doi tuong process de theo doi trang thai
+          $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
 
           $portReady = $false
           for ($i = 1; $i -le 60; $i++) {
-              if ($process.HasExited) {
-                  Write-Error "Backend vua khoi dong da bi dung. ExitCode=$($process.ExitCode)"
+              if ($process) { $process.Refresh() }
+              if (-not $process -or $process.HasExited) {
+                  $exitCode = if ($process) { $process.ExitCode } else { "N/A" }
+                  Write-Error "Backend vua khoi dong da bi dung. ExitCode=$exitCode"
                   Write-Host "--- backend-out.log ---"
                   if (Test-Path $outLog) { Get-Content $outLog -Tail 150 }
                   Write-Host "--- backend-error.log ---"
@@ -161,7 +171,9 @@ jobs:
               if (Test-Path $errLog) { Get-Content $errLog -Tail 200 }
               if (Get-Command jcmd -ErrorAction SilentlyContinue) {
                   $threadDump = Join-Path $logDir "thread-dump-$timestamp.txt"
-                  jcmd $process.Id Thread.print | Out-File -FilePath $threadDump -Encoding UTF8
+                  $javaProc = Get-CimInstance Win32_Process -Filter "ParentProcessId = $processId" | Where-Object { $_.Name -eq "java.exe" }
+                  $targetPid = if ($javaProc) { $javaProc.ProcessId } else { $processId }
+                  jcmd $targetPid Thread.print | Out-File -FilePath $threadDump -Encoding UTF8
                   Write-Host "Thread dump: $threadDump"
               }
               exit 1
@@ -183,8 +195,10 @@ jobs:
                       }
                   }
               }
-              if ($process.HasExited) {
-                  Write-Error "Backend bat ngo bi dung trong luc theo doi! ExitCode=$($process.ExitCode)"
+              if ($process) { $process.Refresh() }
+              if (-not $process -or $process.HasExited) {
+                  $exitCode = if ($process) { $process.ExitCode } else { "N/A" }
+                  Write-Error "Backend bat ngo bi dung trong luc theo doi! ExitCode=$exitCode"
                   if (Test-Path $errLog) { Get-Content $errLog -Tail 150 }
                   exit 1
               }
