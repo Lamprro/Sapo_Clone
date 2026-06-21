@@ -12,7 +12,8 @@ import 'email_verification_screen.dart';
 import '../../utils/error_handler.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool showSignup;
+  const LoginScreen({super.key, this.showSignup = true});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -397,73 +398,184 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Icon(Icons.store_rounded, size: 72, color: theme.colorScheme.primary),
-                  const SizedBox(height: 12),
-                  Text('Sapo Clone', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
-                  const SizedBox(height: 8),
-                  Text('Sign in to your account', textAlign: TextAlign.center, style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[600])),
-                  const SizedBox(height: 32),
-                  _buildCompanySelector(theme),
-                  const SizedBox(height: 16),
-                  CustomTextField(
-                    controller: _usernameCtrl,
-                    label: 'Username',
-                    prefixIcon: Icons.person_outline,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Username is required' : null,
-                  ),
-                  CustomTextField(
-                    controller: _passwordCtrl,
-                    label: 'Password',
-                    prefixIcon: Icons.lock_outline,
-                    obscureText: _obscurePassword,
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Password is required' : null,
-                  ),
-                  Align(alignment: Alignment.centerRight, child: TextButton(onPressed: _showForgotPasswordDialog, child: const Text('Forgot Password?'))),
-                  const SizedBox(height: 8),
-                  if (auth.errorMessage != null) ...[
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              theme.colorScheme.primary.withOpacity(0.08),
+              theme.colorScheme.background,
+              Colors.white,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red[200]!)),
-                      child: Row(
-                        children: [
-                          Icon(Icons.error_outline, color: Colors.red[400], size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(auth.errorMessage!, style: TextStyle(color: Colors.red[700], fontSize: 14))),
-                        ],
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 64,
+                        color: theme.colorScheme.primary,
                       ),
                     ),
                     const SizedBox(height: 16),
-                  ],
-                  CustomButton(label: 'Login', onPressed: _handleLogin, isLoading: auth.isLoading, icon: Icons.login),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("Don't have an account? ", style: TextStyle(color: Colors.grey[600])),
-                      TextButton(
-                        onPressed: () {
-                          auth.clearError();
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupScreen()));
-                        },
-                        child: const Text('Sign Up'),
+                    Text(
+                      'Sapo Retail',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.primary,
+                        letterSpacing: -0.5,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Chào mừng bạn quay trở lại!',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Card(
+                      elevation: 4,
+                      shadowColor: Colors.black.withOpacity(0.08),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Đăng nhập tài khoản khách hàng',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[800],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildCompanySelector(theme),
+                            const SizedBox(height: 12),
+                            CustomTextField(
+                              controller: _usernameCtrl,
+                              label: 'Tên tài khoản',
+                              prefixIcon: Icons.person_outline,
+                              validator: (v) =>
+                                  (v == null || v.trim().isEmpty) ? 'Vui lòng nhập tên tài khoản' : null,
+                            ),
+                            CustomTextField(
+                              controller: _passwordCtrl,
+                              label: 'Mật khẩu',
+                              prefixIcon: Icons.lock_outline,
+                              obscureText: _obscurePassword,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                              ),
+                              validator: (v) =>
+                                  (v == null || v.isEmpty) ? 'Vui lòng nhập mật khẩu' : null,
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: _showForgotPasswordDialog,
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  'Quên mật khẩu?',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            if (auth.errorMessage != null) ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red[50],
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.red[100]!),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.error_outline, color: Colors.red[400], size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        auth.errorMessage!,
+                                        style: TextStyle(color: Colors.red[700], fontSize: 13, fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            CustomButton(
+                              label: 'Đăng Nhập',
+                              onPressed: _handleLogin,
+                              isLoading: auth.isLoading,
+                              icon: Icons.login_rounded,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    if (widget.showSignup)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text("Bạn chưa có tài khoản? ", style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                          TextButton(
+                            onPressed: () {
+                              auth.clearError();
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupScreen()));
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Đăng ký ngay',
+                              style: TextStyle(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -475,31 +587,115 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildCompanySelector(ThemeData theme) {
     if (_isLoadingCompanies) {
       return Container(
+        margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
-        child: const Row(children: [SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 12), Text('Loading companies...')]),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Đang tải danh sách công ty...',
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            )
+          ],
+        ),
       );
     }
     if (_companyError != null) {
       return Container(
+        margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.orange[50], border: Border.all(color: Colors.orange[200]!), borderRadius: BorderRadius.circular(8)),
-        child: Row(children: [const Icon(Icons.warning_amber, color: Colors.orange), const SizedBox(width: 8), Expanded(child: Text(_companyError!)), TextButton(onPressed: () { setState(() { _isLoadingCompanies = true; _companyError = null; }); _loadCompanies(); }, child: const Text('Retry'))]),
-      );
-    }
-    return InkWell(
-      onTap: _showCompanyPicker,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(border: Border.all(color: _selectedCompany != null ? theme.colorScheme.primary : Colors.grey[400]!), borderRadius: BorderRadius.circular(8), color: _selectedCompany != null ? theme.colorScheme.primary.withValues(alpha: 0.05) : null),
+        decoration: BoxDecoration(
+          color: Colors.orange[50],
+          border: Border.all(color: Colors.orange[200]!),
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Row(
           children: [
-            Icon(Icons.business, color: _selectedCompany != null ? theme.colorScheme.primary : Colors.grey[500]),
-            const SizedBox(width: 12),
-            Expanded(child: _selectedCompany != null ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_selectedCompany!.companyName, style: TextStyle(fontWeight: FontWeight.w600, color: theme.colorScheme.primary)), if (_selectedCompany!.companyAddress != null) Text(_selectedCompany!.companyAddress!, style: const TextStyle(fontSize: 13, color: Colors.grey))]) : const Text('Select a Company')),
-            const Icon(Icons.arrow_drop_down),
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _companyError!,
+                style: TextStyle(fontSize: 13, color: Colors.orange.shade800),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _isLoadingCompanies = true;
+                  _companyError = null;
+                });
+                _loadCompanies();
+              },
+              child: const Text('Thử lại'),
+            )
           ],
+        ),
+      );
+    }
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: _showCompanyPicker,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(
+              color: _selectedCompany != null ? theme.colorScheme.primary : Colors.grey.shade200,
+              width: _selectedCompany != null ? 1.5 : 1.0,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.business_rounded,
+                color: _selectedCompany != null ? theme.colorScheme.primary : Colors.grey[500],
+                size: 22,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _selectedCompany != null
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _selectedCompany!.companyName,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (_selectedCompany!.companyAddress != null)
+                            Text(
+                              _selectedCompany!.companyAddress!,
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                        ],
+                      )
+                    : Text(
+                        'Chọn công ty / cửa hàng',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+              ),
+              Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey[600]),
+            ],
+          ),
         ),
       ),
     );

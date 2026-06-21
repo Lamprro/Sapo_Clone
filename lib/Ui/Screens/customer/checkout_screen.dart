@@ -140,23 +140,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     if (orders != null) {
       await cartProvider.clearCart();
-      setState(() {
-        _createdOrders = orders;
-        _orderCreated = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Order placed successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order placed successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        Navigator.pop(context, true);
+      }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed: ${orderProvider.errorMessage}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to place order: ${orderProvider.errorMessage ?? "Unknown error"}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

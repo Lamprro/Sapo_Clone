@@ -238,12 +238,7 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCompany == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a company'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      ErrorHandler.showInfo(context, 'Please select a company');
       return;
     }
 

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../Providers/cart_provider.dart';
 import '../../Widgets/cart_item_tile.dart';
 import 'checkout_screen.dart';
+import 'customer_shell.dart';
 import '../../../utils/currency_format.dart';
 
 class CartScreen extends StatelessWidget {
@@ -168,8 +169,8 @@ class _CartBodyState extends State<CartBody> {
                       ElevatedButton(
                         onPressed: _selectedCount == 0
                             ? null
-                            : () {
-                                Navigator.push(
+                            : () async {
+                                final success = await Navigator.push<bool>(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => CheckoutScreen(
@@ -180,6 +181,9 @@ class _CartBodyState extends State<CartBody> {
                                     ),
                                   ),
                                 );
+                                if (success == true && mounted) {
+                                  context.findAncestorStateOfType<CustomerShellState>()?.setIndex(2);
+                                }
                               },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(

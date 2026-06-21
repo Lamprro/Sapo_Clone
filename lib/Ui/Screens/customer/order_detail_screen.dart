@@ -6,6 +6,7 @@ import 'package:sapo_clone_app/models/order.dart';
 import 'package:sapo_clone_app/models/rating.dart';
 import 'package:sapo_clone_app/utils/currency_format.dart';
 import 'package:sapo_clone_app/Ui/Widgets/rating_input_widget.dart';
+import 'package:sapo_clone_app/utils/error_handler.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final int orderId;
@@ -284,9 +285,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           if (success && context.mounted) {
             Navigator.pop(context);
             await rp.loadUserRatings();
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Success!'), backgroundColor: Colors.green));
+            ErrorHandler.showSuccess(context, 'Success!');
           } else if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(rp.errorMessage ?? 'An error occurred'), backgroundColor: Colors.red));
+            ErrorHandler.showError(context, rp.errorMessage ?? 'An error occurred');
           }
         },
       ),

@@ -7,6 +7,7 @@ import 'package:sapo_clone_app/models/rating.dart';
 import 'package:sapo_clone_app/utils/currency_format.dart';
 import 'package:sapo_clone_app/Ui/Widgets/rating_input_widget.dart';
 import 'package:sapo_clone_app/Ui/Screens/customer/order_detail_screen.dart';
+import 'package:sapo_clone_app/utils/error_handler.dart';
 
 class MyOrdersScreen extends StatefulWidget {
   const MyOrdersScreen({super.key});
@@ -56,9 +57,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       case 2: return 'SHIPPING';
       case 3: return 'DELIVERED';
       case 4: return 'COMPLETED';
-      case 5: return 'REFUND';
+      case 5: return 'CANCELLED';
       case 6: return 'ERROR';
-      case 7: return 'DISPOSED';
+      case 7: return 'DISPOSE';
       default: return 'UNKNOWN';
     }
   }
@@ -227,17 +228,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           const Divider(),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              const Text('Payment Info:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                              Text(
-                                                '${fullOrder.paymentMethod} (${_getPaymentStatusText(fullOrder.paymentStatus)})',
-                                                style: TextStyle(color: _getPaymentStatusColor(fullOrder.paymentStatus), fontWeight: FontWeight.bold, fontSize: 13),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 12),
                                           const Text('Purchased Items:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                           const SizedBox(height: 12),
                                           for (var item in fullOrder.items)
@@ -282,7 +272,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                                     onPressed: () async {
                                                       final success = await provider.changeOrderStatus(fullOrder.id, 4);
                                                       if (success && mounted) {
-                                                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Order Received!')));
+                                                        ErrorHandler.showSuccess(context, 'Order Received!');
                                                       }
                                                     },
                                                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
@@ -295,7 +285,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                                     onPressed: () async {
                                                       final success = await provider.changeOrderStatus(fullOrder.id, 5);
                                                       if (success && mounted) {
-                                                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancellation requested.')));
+                                                        ErrorHandler.showSuccess(context, 'Cancellation requested.');
                                                       }
                                                     },
                                                     style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
@@ -314,7 +304,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                                 onPressed: () async {
                                                   final success = await provider.changeOrderStatus(fullOrder.id, 5);
                                                   if (success && mounted) {
-                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Order cancelled successfully.')));
+                                                    ErrorHandler.showSuccess(context, 'Order cancelled successfully.');
                                                   }
                                                 },
                                                 style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
@@ -499,11 +489,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           if (mounted) {
             if (success) {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rating saved!'), backgroundColor: Colors.green));
+              ErrorHandler.showSuccess(context, 'Rating saved!');
               await rp.loadUserRatings();
             } else {
               // Display exact error message from backend
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(rp.errorMessage ?? 'Error occurred'), backgroundColor: Colors.red));
+              ErrorHandler.showError(context, rp.errorMessage ?? 'Error occurred');
             }
           }
         },
@@ -526,9 +516,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               if (mounted) {
                 Navigator.pop(context);
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted!'), backgroundColor: Colors.green));
+                  ErrorHandler.showSuccess(context, 'Deleted!');
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(rp.errorMessage ?? 'Failed'), backgroundColor: Colors.red));
+                  ErrorHandler.showError(context, rp.errorMessage ?? 'Failed');
                 }
               }
             },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/product_image.dart';
+import '../../utils/image_url_formatter.dart';
 
 class ImageCarouselWidget extends StatefulWidget {
   final List<ProductImageResponse> images;
@@ -77,16 +78,21 @@ class _ImageCarouselWidgetState extends State<ImageCarouselWidget> {
                       children: [
                         const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                         Center(
-                          child: Image.network(
-                            img.imageUrl,
-                            fit: BoxFit.contain,
-                            alignment: Alignment.center,
-                            width: double.infinity,
-                            height: double.infinity,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.broken_image, size: 80, color: Colors.grey);
-                            },
-                          ),
+                          child: () {
+                            final formattedImg = ImageUrlFormatter.format(img.imageUrl);
+                            return formattedImg != null
+                                ? Image.network(
+                                    formattedImg,
+                                    fit: BoxFit.contain,
+                                    alignment: Alignment.center,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Icon(Icons.broken_image, size: 80, color: Colors.grey);
+                                    },
+                                  )
+                                : const Icon(Icons.broken_image, size: 80, color: Colors.grey);
+                          }(),
                         ),
                         if (img.status == 2)
                           Positioned(

@@ -6,9 +6,8 @@ import 'package:flutter/foundation.dart';
 class ApiService {
   // Automatically detect base URL based on the platform the app is running on
   static String get _baseUrl {
-    if (kIsWeb) return 'http://localhost:8080';
-    if (Platform.isAndroid) return 'http://10.0.2.2:8080'; // For Android Emulator
-    return 'http://localhost:8080'; // For Windows, iOS Simulator, or Mac
+    return 'https://hardened-taekwondo-likewise.ngrok-free.dev';
+    // return 'http://localhost:8080';
   }
 
   ApiService._internal() {
@@ -21,6 +20,7 @@ class ApiService {
         'Accept': 'application/json',
         'Content-Type': 'application/json; charset=utf-8',
         'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+        'ngrok-skip-browser-warning': 'true',
       },
     ));
 

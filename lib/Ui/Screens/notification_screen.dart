@@ -13,13 +13,22 @@ class NotificationScreen extends StatefulWidget {
   State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen> {
+class _NotificationScreenState extends State<NotificationScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NotificationProvider>().fetchUnread();
+      context.read<NotificationProvider>().fetchAllNotifications();
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   IconData _iconForType(String type) {
@@ -52,31 +61,41 @@ class _NotificationScreenState extends State<NotificationScreen> {
       case 'ADMIN_ALERT':
         return Colors.red;
       default:
-        return Colors.grey;
+        return Colors.blueGrey;
     }
   }
 
   String _timeAgo(DateTime dateTime) {
     final difference = DateTime.now().difference(dateTime);
-    if (difference.inDays > 8) {
-      return DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
-    } else if ((difference.inDays / 7).floor() >= 1) {
-      return '1 week ago';
-    } else if (difference.inDays >= 2) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inDays >= 1) {
-      return '1 day ago';
-    } else if (difference.inHours >= 2) {
-      return '${difference.inHours} hours ago';
-    } else if (difference.inHours >= 1) {
-      return '1 hour ago';
-    } else if (difference.inMinutes >= 2) {
-      return '${difference.inMinutes} minutes ago';
-    } else if (difference.inMinutes >= 1) {
-      return '1 minute ago';
+    if (difference.inMinutes < 5) {
+      return 'Vừa xong';
     } else {
-      return 'Just now';
+      return DateFormat('HH:mm dd/MM/yyyy').format(dateTime);
     }
+  }
+
+  Map<String, List<AppNotification>> _groupNotificationsByDate(List<AppNotification> list) {
+    final Map<String, List<AppNotification>> groups = {};
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    for (var notif in list) {
+      final notifDate = DateTime(notif.timestamp.year, notif.timestamp.month, notif.timestamp.day);
+      String dateStr;
+      if (notifDate == today) {
+        dateStr = 'Today';
+      } else if (notifDate == yesterday) {
+        dateStr = 'Yesterday';
+      } else {
+        dateStr = DateFormat('dd/MM/yyyy').format(notif.timestamp);
+      }
+      if (!groups.containsKey(dateStr)) {
+        groups[dateStr] = [];
+      }
+      groups[dateStr]!.add(notif);
+    }
+    return groups;
   }
 
   @override
@@ -84,12 +103,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final theme = Theme.of(context);
     final provider = context.watch<NotificationProvider>();
 
+    // Tất cả notifications
+    final allNotifs = provider.notifications;
+    // Notifications chưa đọc
+    final unreadNotifs = allNotifs.where((n) => !n.read).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
-          if (provider.notifications.isNotEmpty)
-            TextButton(
+          if (unreadNotifs.isNotEmpty)
+            TextButton.icon(
               onPressed: () {
                 provider.markAllAsRead();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -99,58 +123,96 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ),
                 );
               },
-              child: const Text('Mark all as read', style: TextStyle(color: Colors.white)),
+              icon: const Icon(Icons.done_all, color: Colors.white, size: 18),
+              label: const Text('Mark all as read', style: TextStyle(color: Colors.white)),
             ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          tabs: [
+            Tab(text: 'All (${allNotifs.length})'),
+            Tab(text: 'Unread (${unreadNotifs.length})'),
+          ],
+        ),
       ),
-      body: provider.isLoading && provider.notifications.isEmpty
+      body: provider.isLoading && allNotifs.isEmpty
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () => provider.fetchUnread(),
-              child: provider.notifications.isEmpty
-                  ? ListView(
-                      children: [
-                        SizedBox(height: MediaQuery.of(context).size.height * 0.3),
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey[400]),
-                              const SizedBox(height: 16),
-                              Text('No new notifications', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    )
-                  : ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: provider.notifications.length,
-                      itemBuilder: (context, index) {
-                        final notif = provider.notifications[index];
-                        return Dismissible(
-                          key: Key(notif.id),
-                          direction: DismissDirection.endToStart,
-                          background: Container(
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20.0),
-                            color: Colors.green,
-                            child: const Icon(Icons.check, color: Colors.white),
-                          ),
-                          onDismissed: (direction) {
-                            provider.markAsRead(notif.id);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Notification marked as read'),
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
-                          },
-                          child: _buildNotificationCard(notif, theme),
-                        );
-                      },
-                    ),
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildNotificationList(allNotifs, provider, theme),
+                _buildNotificationList(unreadNotifs, provider, theme),
+              ],
             ),
+    );
+  }
+
+  Widget _buildNotificationList(List<AppNotification> list, NotificationProvider provider, ThemeData theme) {
+    if (list.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => provider.fetchAllNotifications(),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.notifications_off_outlined, size: 70, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No notifications found',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final grouped = _groupNotificationsByDate(list);
+    final groupKeys = grouped.keys.toList();
+
+    return RefreshIndicator(
+      onRefresh: () => provider.fetchAllNotifications(),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: groupKeys.length,
+        itemBuilder: (context, groupIndex) {
+          final groupTitle = groupKeys[groupIndex];
+          final groupItems = grouped[groupTitle]!;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
+                child: Text(
+                  groupTitle,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ...groupItems.map((notif) {
+                return InkWell(
+                  onTap: () {
+                    if (!notif.read) {
+                      provider.markAsRead(notif.id);
+                    }
+                  },
+                  child: _buildNotificationCard(notif, theme),
+                );
+              }),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -160,23 +222,30 @@ class _NotificationScreenState extends State<NotificationScreen> {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface.withAlpha(150),
+            color: notification.read
+                ? theme.colorScheme.surface.withAlpha(120)
+                : theme.colorScheme.primaryContainer.withAlpha(50),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white24),
+            border: Border.all(
+              color: notification.read
+                  ? Colors.white12
+                  : theme.colorScheme.primary.withAlpha(60),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(20),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
+                color: Colors.black.withAlpha(15),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Loại notification icon
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -186,10 +255,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 child: Icon(
                   _iconForType(notification.type),
                   color: _colorForType(notification.type),
-                  size: 24,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: 12),
+              // Chi tiết
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,24 +267,38 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     Text(
                       notification.title,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: notification.read ? FontWeight.normal : FontWeight.bold,
+                        color: notification.read ? Colors.grey[700] : Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       notification.message,
-                      style: theme.textTheme.bodyMedium,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: notification.read ? Colors.grey[600] : Colors.black87,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       _timeAgo(notification.timestamp),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
+                        color: Colors.grey[500],
                       ),
                     ),
                   ],
                 ),
               ),
+              // Chấm chưa đọc
+              if (!notification.read)
+                Container(
+                  margin: const EdgeInsets.only(top: 4, left: 8),
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
             ],
           ),
         ),

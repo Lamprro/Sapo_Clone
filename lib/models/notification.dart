@@ -23,7 +23,9 @@ class AppNotification {
       type: json['type'] ?? 'UNKNOWN',
       title: json['title'] ?? '',
       message: json['message'] ?? '',
-      timestamp: json['timestamp'] != null ? DateTime.parse(json['timestamp']) : DateTime.now(),
+      timestamp: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : (json['timestamp'] != null ? DateTime.parse(json['timestamp']) : DateTime.now()),
       read: json['read'] == true || json['isRead'] == true,
       targetRole: json['targetRole'],
     );

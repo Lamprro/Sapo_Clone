@@ -17,6 +17,7 @@ class ProductResponse {
   final List<String>? categoryNames;
   final List<ProductImageResponse>? images;
   final String? mainImage; // URL of main image (status = 2)
+  final bool? hasStore;
 
   ProductResponse({
     required this.id,
@@ -34,6 +35,7 @@ class ProductResponse {
     this.categoryNames,
     this.images,
     this.mainImage,
+    this.hasStore,
   });
 
   /// Parse from JSON map returned by backend.
@@ -70,6 +72,7 @@ class ProductResponse {
           ?.map((e) => ProductImageResponse.fromJson(e as Map<String, dynamic>))
           .toList(),
       mainImage: json['mainImage'] as String?,
+      hasStore: json['hasStore'] as bool?,
     );
   }
 
@@ -91,6 +94,7 @@ class ProductResponse {
       'categoryNames': categoryNames,
       'images': images?.map((e) => e.toJson()).toList(),
       'mainImage': mainImage,
+      'hasStore': hasStore,
     };
   }
 }

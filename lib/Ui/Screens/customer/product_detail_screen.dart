@@ -8,6 +8,7 @@ import '../../Widgets/image_carousel_widget.dart';
 import '../../Widgets/store_list_widget.dart';
 import '../../Widgets/rating_display_widget.dart';
 import 'checkout_screen.dart';
+import '../../../utils/error_handler.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final ProductResponse product;
@@ -32,6 +33,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final productProvider = context.watch<ProductProvider>();
     final detail = productProvider.detailState;
     final isLoading = productProvider.isLoadingDetail;
+
+    final hasNoStore = !isLoading && detail.stores != null && detail.stores!.content.isEmpty;
+    final isPurchaseDisabled = widget.product.status == 0 || hasNoStore || isLoading;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.product.productName)),
@@ -110,11 +114,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
 
-            // Store List
+            // Store List / No Store Banner
             if (isLoading && detail.stores == null)
               const Padding(
                 padding: EdgeInsets.all(16.0),
                 child: Center(child: CircularProgressIndicator()),
+              )
+            else if (hasNoStore)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  border: Border.all(color: Colors.orange[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.store_mall_directory_outlined, color: Colors.orange),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'No store available for this product',
+                        style: TextStyle(color: Colors.orange[800], fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
               )
             else if (detail.stores != null && detail.stores!.content.isNotEmpty)
               StoreListWidget(stores: detail.stores!.content),
@@ -162,9 +188,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               // Add to Cart button
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: widget.product.status == 0 ? null : () => _addToCart(),
+                  onPressed: isPurchaseDisabled ? null : () => _addToCart(),
                   icon: const Icon(Icons.add_shopping_cart),
-                  label: Text(widget.product.status == 0 ? 'Unavailable' : 'Add to Cart'),
+                  label: Text(
+                    widget.product.status == 0 
+                        ? 'Unavailable' 
+                        : hasNoStore 
+                            ? 'No Store' 
+                            : 'Add to Cart'
+                  ),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -174,9 +206,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               // Buy Now button
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: widget.product.status == 0 ? null : () => _buyNow(),
+                  onPressed: isPurchaseDisabled ? null : () => _buyNow(),
                   icon: const Icon(Icons.shopping_bag),
-                  label: Text(widget.product.status == 0 ? 'Out of Stock' : 'Buy Now'),
+                  label: Text(
+                    widget.product.status == 0 
+                        ? 'Out of Stock' 
+                        : hasNoStore 
+                            ? 'No Store' 
+                            : 'Buy Now'
+                  ),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -193,12 +231,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final cartProvider = context.read<CartProvider>();
     final success = await cartProvider.addItem(widget.product.id, 1);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? 'Added to cart' : 'Failed to add to cart'),
-          backgroundColor: success ? Colors.green : Colors.red,
-        ),
-      );
+      if (success) {
+        ErrorHandler.showSuccess(context, 'Added to cart');
+      } else {
+        ErrorHandler.showError(context, 'Failed to add to cart');
+      }
     }
   }
 
@@ -208,12 +245,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     
     if (!success) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to add to cart'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ErrorHandler.showError(context, 'Failed to add to cart');
       }
       return;
     }

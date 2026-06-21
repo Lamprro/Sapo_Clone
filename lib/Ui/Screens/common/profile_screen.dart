@@ -76,6 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isCustomer = context.read<AuthProvider>().isCustomer;
     return Scaffold(
       appBar: AppBar(title: const Text('My Profile')),
       body: SingleChildScrollView(
@@ -110,6 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label: 'Email',
                 prefixIcon: Icons.email,
                 keyboardType: TextInputType.emailAddress,
+                readOnly: isCustomer,
                 validator: (v) {
                   final value = v?.trim() ?? '';
                   if (value.isEmpty) return 'Required';
