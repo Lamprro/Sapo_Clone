@@ -79,7 +79,7 @@ public class SecurityConfiguration {
         http.authorizeHttpRequests(auth -> auth
                 // Public: login, signup, websockets
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/ws/**").permitAll()
+                .requestMatchers("/ws", "/ws/**").permitAll()
                 
                 // Public GET endpoints for registration/lookup
                 .requestMatchers(HttpMethod.GET, "/api/company").permitAll()
