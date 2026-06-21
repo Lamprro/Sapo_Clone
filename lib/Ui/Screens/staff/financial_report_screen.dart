@@ -211,7 +211,7 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
                 : [
                     const DropdownMenuItem(
                       value: -2, 
-                      child: Text('Entire Company (Toàn công ty)', overflow: TextOverflow.ellipsis)
+                      child: Text('Entire Company', overflow: TextOverflow.ellipsis)
                     ),
                     ..._stores.map((s) {
                       return DropdownMenuItem(
@@ -515,7 +515,7 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Completed Orders (Đơn bán hoàn thành)', style: Theme.of(context).textTheme.titleMedium),
+            Text('Completed Orders', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             if (orders.isEmpty)
               const Text('No completed orders in the selected range')

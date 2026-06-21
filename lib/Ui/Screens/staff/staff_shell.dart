@@ -66,17 +66,17 @@ class _StaffShellState extends State<StaffShell> {
     final theme = Theme.of(context);
 
     final titles = [
-      'Tổng quan hệ thống',
-      'Danh sách sản phẩm',
-      'Quản lý đơn hàng',
-      'Đơn mua hàng (PO)',
-      'Kiểm kho & Tồn kho',
-      'Quản lý nhân viên',
-      'Báo cáo doanh thu',
-      'Chương trình khuyến mãi',
-      'Màn hình thu ngân (POS)',
-      'Nhà cung cấp',
-      'Thông báo nội bộ'
+      'System Overview',
+      'Product List',
+      'Order Management',
+      'Purchase Orders (PO)',
+      'Inventory Control',
+      'Employee Management',
+      'Financial Reports',
+      'Promotions',
+      'Cashier POS',
+      'Suppliers',
+      'Internal Notifications'
     ];
 
     return PopScope(
@@ -89,19 +89,19 @@ class _StaffShellState extends State<StaffShell> {
           final shouldExit = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Thoát ứng dụng'),
-              content: const Text('Bạn có chắc chắn muốn thoát khỏi ứng dụng?'),
+              title: const Text('Exit Application'),
+              content: const Text('Are you sure you want to exit the application?'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Hủy'),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                   ),
-                  child: const Text('Thoát'),
+                  child: const Text('Exit'),
                 ),
               ],
             ),
@@ -162,11 +162,11 @@ class _StaffShellState extends State<StaffShell> {
                   ),
                 ),
                 accountName: Text(
-                  auth.user?.fullName ?? 'Nhân viên Sapo',
+                  auth.user?.fullName ?? 'Sapo Staff',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 accountEmail: Text(
-                  isManager ? 'Quyền hạn: Quản lý cửa hàng' : 'Quyền hạn: Nhân viên bán hàng',
+                  isManager ? 'Permission: Store Manager' : 'Permission: Cashier/Staff',
                   style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 13),
                 ),
               ),
@@ -176,28 +176,28 @@ class _StaffShellState extends State<StaffShell> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   children: [
-                    _buildDrawerItem(0, Icons.dashboard_rounded, 'Tổng quan hệ thống'),
-                    _buildDrawerItem(10, Icons.notifications_rounded, 'Thông báo nội bộ'),
+                    _buildDrawerItem(0, Icons.dashboard_rounded, 'System Overview'),
+                    _buildDrawerItem(10, Icons.notifications_rounded, 'Internal Notifications'),
                     const Divider(height: 16),
-                    _buildDrawerItem(1, Icons.inventory_2_rounded, 'Danh sách sản phẩm'),
-                    _buildDrawerItem(2, Icons.receipt_long_rounded, 'Quản lý đơn hàng'),
-                    _buildDrawerItem(3, Icons.local_shipping_rounded, 'Đơn mua hàng (PO)'),
-                    _buildDrawerItem(4, Icons.warehouse_rounded, 'Kiểm kho & Tồn kho'),
-                    _buildDrawerItem(9, Icons.storefront_rounded, 'Nhà cung cấp'),
+                    _buildDrawerItem(1, Icons.inventory_2_rounded, 'Product List'),
+                    _buildDrawerItem(2, Icons.receipt_long_rounded, 'Order Management'),
+                    _buildDrawerItem(3, Icons.local_shipping_rounded, 'Purchase Orders (PO)'),
+                    _buildDrawerItem(4, Icons.warehouse_rounded, 'Inventory Control'),
+                    _buildDrawerItem(9, Icons.storefront_rounded, 'Suppliers'),
                     if (auth.isStaff) ...[
-                      _buildDrawerItem(8, Icons.point_of_sale_rounded, 'Màn hình thu ngân'),
+                      _buildDrawerItem(8, Icons.point_of_sale_rounded, 'Cashier POS'),
                     ],
                     if (isManager) ...[
                       const Divider(height: 16),
-                      _buildDrawerItem(7, Icons.local_offer_rounded, 'Chương trình khuyến mãi'),
-                      _buildDrawerItem(5, Icons.people_rounded, 'Quản lý nhân viên'),
-                      _buildDrawerItem(6, Icons.bar_chart_rounded, 'Báo cáo doanh thu'),
+                      _buildDrawerItem(7, Icons.local_offer_rounded, 'Promotions'),
+                      _buildDrawerItem(5, Icons.people_rounded, 'Employee Management'),
+                      _buildDrawerItem(6, Icons.bar_chart_rounded, 'Financial Reports'),
                     ],
                     const Divider(height: 16),
                     ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       leading: const Icon(Icons.person_outline_rounded),
-                      title: const Text('Thông tin cá nhân', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      title: const Text('Personal Information', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
@@ -206,7 +206,7 @@ class _StaffShellState extends State<StaffShell> {
                     ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       leading: const Icon(Icons.lock_outline_rounded),
-                      title: const Text('Đổi mật khẩu', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
@@ -217,7 +217,7 @@ class _StaffShellState extends State<StaffShell> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
                       title: const Text(
-                        'Đăng xuất',
+                        'Log out',
                         style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       onTap: () {
@@ -288,12 +288,12 @@ class _StaffDashboardView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Xin chào, ${auth.user?.fullName ?? "Nhân viên"} 👋',
+                    'Hello, ${auth.user?.fullName ?? "Staff"} 👋',
                     style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Chào mừng bạn trở lại hệ thống quản lý Sapo.',
+                    'Welcome back to the Sapo Management System.',
                     style: TextStyle(color: Colors.grey.shade500, fontSize: 13, fontWeight: FontWeight.w500),
                   ),
                 ],
@@ -305,7 +305,7 @@ class _StaffDashboardView extends StatelessWidget {
 
         // Quick Stats Cards Grid
         Text(
-          'HOẠT ĐỘNG HÔM NAY',
+          'TODAY\'S ACTIVITIES',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w900,
@@ -323,29 +323,29 @@ class _StaffDashboardView extends StatelessWidget {
           childAspectRatio: 1.4,
           children: [
             _buildStatCard(
-              title: 'Sản phẩm',
-              subtitle: 'Kho sản phẩm',
+              title: 'Products',
+              subtitle: 'Product Inventory',
               color: Colors.blue.shade600,
               icon: Icons.inventory_2_rounded,
               onTap: () => onNavigate(1),
             ),
             _buildStatCard(
-              title: 'Đơn hàng',
-              subtitle: 'Bán lẻ & online',
+              title: 'Orders',
+              subtitle: 'Retail & Online',
               color: Colors.teal.shade600,
               icon: Icons.receipt_long_rounded,
               onTap: () => onNavigate(2),
             ),
             _buildStatCard(
-              title: 'Nhà cung cấp',
-              subtitle: 'Đối tác nhập hàng',
+              title: 'Suppliers',
+              subtitle: 'Supply Partners',
               color: Colors.orange.shade600,
               icon: Icons.storefront_rounded,
               onTap: () => onNavigate(9),
             ),
             _buildStatCard(
-              title: 'Tồn kho',
-              subtitle: 'Kiểm tra tồn',
+              title: 'Inventory',
+              subtitle: 'Check stock levels',
               color: Colors.purple.shade600,
               icon: Icons.warehouse_rounded,
               onTap: () => onNavigate(4),
@@ -356,7 +356,7 @@ class _StaffDashboardView extends StatelessWidget {
 
         // Quick Actions Panels
         Text(
-          'CHỨC NĂNG THƯỜNG DÙNG',
+          'FREQUENTLY USED FUNCTIONS',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w900,
@@ -381,8 +381,8 @@ class _StaffDashboardView extends StatelessWidget {
                     decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                     child: const Icon(Icons.point_of_sale_rounded, color: Colors.indigo, size: 20),
                   ),
-                  title: const Text('Màn hình thu ngân (POS)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text('Tạo hóa đơn bán lẻ nhanh tại quầy', style: TextStyle(fontSize: 12)),
+                  title: const Text('Cashier POS Screen', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('Create retail bills instantly at counter', style: TextStyle(fontSize: 12)),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => onNavigate(8),
                 ),
@@ -394,8 +394,8 @@ class _StaffDashboardView extends StatelessWidget {
                     decoration: BoxDecoration(color: Colors.teal.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                     child: const Icon(Icons.bar_chart_rounded, color: Colors.teal, size: 20),
                   ),
-                  title: const Text('Báo cáo doanh thu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text('Xem doanh số, lợi nhuận chi tiết', style: TextStyle(fontSize: 12)),
+                  title: const Text('Financial Reports', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('View detailed sales and profits', style: TextStyle(fontSize: 12)),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => onNavigate(6),
                 ),
@@ -406,8 +406,8 @@ class _StaffDashboardView extends StatelessWidget {
                     decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                     child: const Icon(Icons.local_offer_rounded, color: Colors.orange, size: 20),
                   ),
-                  title: const Text('Chương trình khuyến mãi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text('Quản lý mã giảm giá, chiết khấu', style: TextStyle(fontSize: 12)),
+                  title: const Text('Promotions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('Manage discount codes and vouchers', style: TextStyle(fontSize: 12)),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => onNavigate(7),
                 ),

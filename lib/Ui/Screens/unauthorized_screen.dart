@@ -21,14 +21,14 @@ class UnauthorizedScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Truy cập bị từ chối',
+                'Access Denied',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
               ),
               const SizedBox(height: 12),
               Text(
-                'Ứng dụng này chỉ dành cho Admin và Nhân viên.\nVui lòng sử dụng ứng dụng Sapo dành cho Khách hàng.',
+                'This application is only for Admin and Staff.\nPlease use the Sapo Customer application.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],
@@ -38,7 +38,7 @@ class UnauthorizedScreen extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: () => context.read<AuthProvider>().logout(),
                 icon: const Icon(Icons.logout),
-                label: const Text('Đăng xuất'),
+                label: const Text('Log out'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.error,
                   foregroundColor: Colors.white,

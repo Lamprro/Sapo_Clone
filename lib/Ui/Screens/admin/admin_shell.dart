@@ -57,7 +57,7 @@ class _AdminShellState extends State<AdminShell> {
   Widget build(BuildContext context) {
     final auth = context.read<AuthProvider>();
     final theme = Theme.of(context);
-    final titles = ['Quản lý công ty', 'Quản lý cửa hàng', 'Quản lý tài khoản', 'Thông báo hệ thống'];
+    final titles = ['Company Management', 'Store Management', 'Account Management', 'System Notifications'];
 
     return PopScope(
       canPop: false,
@@ -69,19 +69,19 @@ class _AdminShellState extends State<AdminShell> {
           final shouldExit = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Thoát ứng dụng'),
-              content: const Text('Bạn có chắc chắn muốn thoát khỏi ứng dụng?'),
+              title: const Text('Exit Application'),
+              content: const Text('Are you sure you want to exit the application?'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Hủy'),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                   ),
-                  child: const Text('Thoát'),
+                  child: const Text('Exit'),
                 ),
               ],
             ),
@@ -110,7 +110,7 @@ class _AdminShellState extends State<AdminShell> {
             IconButton(
               onPressed: _refreshCurrent,
               icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Tải lại danh sách',
+              tooltip: 'Reload list',
             ),
             const SizedBox(width: 8),
           ],
@@ -148,11 +148,11 @@ class _AdminShellState extends State<AdminShell> {
                   ),
                 ),
                 accountName: Text(
-                  auth.user?.fullName ?? 'Hệ thống Admin',
+                  auth.user?.fullName ?? 'System Admin',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 accountEmail: const Text(
-                  'Quyền hạn: Quản trị viên cấp cao',
+                  'Role: Super Administrator',
                   style: TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ),
@@ -163,28 +163,28 @@ class _AdminShellState extends State<AdminShell> {
                     _buildDrawerItem(
                       index: 0,
                       icon: Icons.business_rounded,
-                      label: 'Quản lý công ty',
+                      label: 'Company Management',
                     ),
                     _buildDrawerItem(
                       index: 1,
                       icon: Icons.storefront_rounded,
-                      label: 'Quản lý cửa hàng',
+                      label: 'Store Management',
                     ),
                     _buildDrawerItem(
                       index: 2,
                       icon: Icons.people_outline_rounded,
-                      label: 'Quản lý tài khoản',
+                      label: 'Account Management',
                     ),
                     _buildDrawerItem(
                       index: 3,
                       icon: Icons.notifications_none_rounded,
-                      label: 'Thông báo hệ thống',
+                      label: 'System Notifications',
                     ),
                     const Divider(height: 32),
                     ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       leading: const Icon(Icons.person_outline_rounded),
-                      title: const Text('Thông tin cá nhân', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      title: const Text('Personal Information', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
@@ -193,7 +193,7 @@ class _AdminShellState extends State<AdminShell> {
                     ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       leading: const Icon(Icons.lock_outline_rounded),
-                      title: const Text('Đổi mật khẩu', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
@@ -204,7 +204,7 @@ class _AdminShellState extends State<AdminShell> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
                       title: const Text(
-                        'Đăng xuất',
+                        'Log out',
                         style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       onTap: () {

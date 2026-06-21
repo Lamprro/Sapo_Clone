@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sapo_clone_app_2/models/order.dart';
+import 'package:sapo_clone_app_2/services/order_service.dart';
 
 import '../../../Providers/order_provider.dart';
 import '../../../utils/currency_format.dart';
@@ -15,7 +16,7 @@ class OrdersManagementScreen extends StatefulWidget {
 }
 
 class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
-  // 0: PENDING, 1: CONFIRMED, 2: SHIPPING, 3: DELIVERED, 4: COMPLETED, 5: CANCELLED, 6: ERROR, 7: DISPOSE
+  // null: ALL, 0: PENDING, 1: CONFIRMED, 2: SHIPPING, 3: DELIVERED, 4: COMPLETED, 5: CANCELLED, 6: ERROR, 7: DISPOSE
   static const _statusOptions = <int, String>{
     0: 'PENDING',
     1: 'CONFIRMED',
@@ -27,16 +28,19 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
     7: 'DISPOSE',
   };
 
-  // Default tab is PENDING for staff
-  int _filterStatus = 0;
+  // Default tab is ALL for staff
+  int? _filterStatus;
   final TextEditingController _searchCtrl = TextEditingController();
   Timer? _searchDebounce;
+  Map<int, int> _statusCounts = {};
+  bool _fetchingCounts = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetch();
+      _fetchStatusCounts();
     });
   }
 
@@ -45,6 +49,32 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
     _searchCtrl.dispose();
     _searchDebounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _fetchStatusCounts() async {
+    if (_fetchingCounts) return;
+    _fetchingCounts = true;
+    final service = OrderService();
+    try {
+      final page = await service.getList(size: 1);
+      if (mounted) {
+        setState(() {
+          _statusCounts[-1] = page.totalElements;
+        });
+      }
+    } catch (_) {}
+
+    for (int status in [0, 1, 2, 3, 4, 5, 6, 7]) {
+      try {
+        final page = await service.getList(status: status, size: 1);
+        if (mounted) {
+          setState(() {
+            _statusCounts[status] = page.totalElements;
+          });
+        }
+      } catch (_) {}
+    }
+    _fetchingCounts = false;
   }
 
   void _fetch() {
@@ -149,6 +179,9 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
         ),
       ),
     );
+    if (success) {
+      _fetchStatusCounts();
+    }
   }
 
   @override
@@ -193,16 +226,33 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              itemCount: _statusOptions.length,
+              itemCount: _statusOptions.length + 1,
               itemBuilder: (context, index) {
-                final entry = _statusOptions.entries.elementAt(index);
-                final status = entry.key;
+                int? status;
+                String statusName;
+                if (index == 0) {
+                  status = null;
+                  statusName = 'ALL';
+                } else {
+                  final entry = _statusOptions.entries.elementAt(index - 1);
+                  status = entry.key;
+                  statusName = entry.value;
+                }
+
                 final isSelected = _filterStatus == status;
+                final key = status ?? -1;
+                String labelText = statusName;
+                if (_statusCounts.containsKey(key)) {
+                  final countVal = _statusCounts[key]!;
+                  final countText = countVal > 99 ? '99+' : '$countVal';
+                  labelText = '$statusName ($countText)';
+                }
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ChoiceChip(
                     visualDensity: VisualDensity.compact,
-                    label: Text(entry.value, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.blue)),
+                    label: Text(labelText, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.blue)),
                     selected: isSelected,
                     selectedColor: Colors.blue,
                     checkmarkColor: Colors.white,
@@ -212,6 +262,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
                       if (!selected) return;
                       setState(() => _filterStatus = status);
                       _fetch();
+                      _fetchStatusCounts();
                     },
                   ),
                 );
@@ -393,6 +444,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
                                                           if (confirmed == true && mounted) {
                                                             await context.read<OrderProvider>().changePaymentStatus(order.id, 3);
                                                             _fetch();
+                                                            _fetchStatusCounts();
                                                           }
                                                         },
                                                       ),
@@ -415,6 +467,7 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
                                                           if (newPayment == null) return;
                                                           await context.read<OrderProvider>().changePaymentStatus(order.id, newPayment);
                                                           _fetch();
+                                                          _fetchStatusCounts();
                                                         },
                                                       ),
                                                     ),
@@ -423,7 +476,10 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
                                                     onPressed: () => Navigator.push(
                                                       context,
                                                       MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: order.id)),
-                                                    ),
+                                                    ).then((_) {
+                                                      _fetch();
+                                                      _fetchStatusCounts();
+                                                    }),
                                                   ),
                                                 ],
                                               ),

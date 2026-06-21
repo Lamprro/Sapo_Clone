@@ -114,8 +114,8 @@ class _UsersPanelState extends State<UsersPanel> {
                     children: [
                       Text(
                         selectedRoleId == 2 
-                            ? 'Create Manager (Tạo Manager)' 
-                            : (selectedRoleId == 3 ? 'Create Employee (Tạo Nhân viên)' : 'Create Customer (Tạo Khách hàng)'),
+                            ? 'Create Manager' 
+                            : (selectedRoleId == 3 ? 'Create Employee' : 'Create Customer'),
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
@@ -176,8 +176,8 @@ class _UsersPanelState extends State<UsersPanel> {
                         ),
                         items: const [
                           DropdownMenuItem(value: 2, child: Text('Manager')),
-                          DropdownMenuItem(value: 3, child: Text('Employee (Nhân viên)')),
-                          DropdownMenuItem(value: 4, child: Text('Customer (Khách hàng)')),
+                          DropdownMenuItem(value: 3, child: Text('Employee')),
+                          DropdownMenuItem(value: 4, child: Text('Customer')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
