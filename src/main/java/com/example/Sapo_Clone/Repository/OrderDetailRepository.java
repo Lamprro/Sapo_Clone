@@ -16,6 +16,11 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Intege
     @Query("DELETE FROM OrderDetail od WHERE od.order.id = :orderId")
     void deleteAllByOrderId(@Param("orderId") int orderId);
 
+    @Modifying
+    @Query("DELETE FROM OrderDetail od WHERE od.order.id IN " +
+            "(SELECT o.id FROM Order o WHERE o.customer.id = :userId OR o.employee.id = :userId)")
+    int deleteByOrderCustomerOrEmployeeId(@Param("userId") int userId);
+
     @Query("SELECT od FROM OrderDetail od WHERE od.product.id = :productId AND od.order.store.company.id = :companyId")
     org.springframework.data.domain.Page<OrderDetail> findByProduct_IdAndCompany_Id(
             @Param("productId") int productId, 

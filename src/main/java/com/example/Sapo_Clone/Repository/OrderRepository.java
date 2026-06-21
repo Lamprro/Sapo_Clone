@@ -4,6 +4,7 @@ import com.example.Sapo_Clone.Entity.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -57,4 +58,8 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                      @Param("storeId") Integer storeId,
                      @Param("start") LocalDateTime start,
                      @Param("end") LocalDateTime end);
+
+       @Modifying
+       @Query("DELETE FROM Order o WHERE o.customer.id = :userId OR o.employee.id = :userId")
+       int deleteByCustomerOrEmployeeId(@Param("userId") int userId);
 }
