@@ -127,7 +127,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     controller: _searchCtrl,
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                     decoration: InputDecoration(
-                      hintText: 'Tìm kiếm sản phẩm...',
+                      hintText: 'Search products...',
                       hintStyle: TextStyle(color: Colors.grey[400]),
                       prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
                       border: InputBorder.none,

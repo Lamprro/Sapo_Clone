@@ -9,6 +9,8 @@ import 'package:sapo_clone_app/Ui/Widgets/rating_input_widget.dart';
 import 'package:sapo_clone_app/Ui/Screens/customer/order_detail_screen.dart';
 import 'package:sapo_clone_app/utils/error_handler.dart';
 
+import 'package:sapo_clone_app/services/order_service.dart';
+
 class MyOrdersScreen extends StatefulWidget {
   const MyOrdersScreen({super.key});
 
@@ -17,15 +19,19 @@ class MyOrdersScreen extends StatefulWidget {
 }
 
 class _MyOrdersScreenState extends State<MyOrdersScreen> {
-  // 0: PENDING, 1: CONFIRMED, 2: SHIPPING, 3: DELIVERED, 4: COMPLETED, 5: CANCELLED, 6: ERROR, 7: DISPOSED
-  int _selectedStatus = 0; 
+  // null: ALL, 0: PENDING, 1: CONFIRMED, 2: SHIPPING, 3: DELIVERED, 4: COMPLETED, 5: CANCELLED, 6: ERROR, 7: DISPOSED
+  int? _selectedStatus; 
   final TextEditingController _searchCtrl = TextEditingController();
   Timer? _searchDebounce;
+  Map<int, int> _statusCounts = {};
+  bool _fetchingCounts = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchOrders();
+      _fetchStatusCounts();
     });
   }
 
@@ -34,6 +40,32 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     _searchCtrl.dispose();
     _searchDebounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _fetchStatusCounts() async {
+    if (_fetchingCounts) return;
+    _fetchingCounts = true;
+    final service = OrderService();
+    try {
+      final page = await service.getList(size: 1);
+      if (mounted) {
+        setState(() {
+          _statusCounts[-1] = page.totalElements;
+        });
+      }
+    } catch (_) {}
+
+    for (int status in [0, 1, 2, 3, 4, 5, 6]) {
+      try {
+        final page = await service.getList(status: status, size: 1);
+        if (mounted) {
+          setState(() {
+            _statusCounts[status] = page.totalElements;
+          });
+        }
+      } catch (_) {}
+    }
+    _fetchingCounts = false;
   }
 
   void _fetchOrders() {
@@ -48,6 +80,17 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     _searchDebounce = Timer(const Duration(milliseconds: 800), () {
       _fetchOrders();
     });
+  }
+
+  String _getTabLabel(int? status) {
+    final statusText = status == null ? 'ALL' : _getStatusText(status);
+    final key = status ?? -1;
+    if (_statusCounts.containsKey(key)) {
+      final countVal = _statusCounts[key]!;
+      final countText = countVal > 99 ? '99+' : '$countVal';
+      return '$statusText ($countText)';
+    }
+    return statusText;
   }
 
   String _getStatusText(int status) {
@@ -110,17 +153,18 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           child: Row(
-            children: [0, 1, 2, 3, 4, 5, 6].map((status) {
+            children: [null, 0, 1, 2, 3, 4, 5, 6].map((status) {
               final isSelected = _selectedStatus == status;
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: ChoiceChip(
-                  label: Text(_getStatusText(status), style: const TextStyle(fontSize: 12)),
+                  label: Text(_getTabLabel(status), style: const TextStyle(fontSize: 12)),
                   selected: isSelected,
                   onSelected: (selected) {
                     if (selected) {
                       setState(() => _selectedStatus = status);
                       _fetchOrders();
+                      _fetchStatusCounts();
                     }
                   },
                 ),
@@ -273,6 +317,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                                       final success = await provider.changeOrderStatus(fullOrder.id, 4);
                                                       if (success && mounted) {
                                                         ErrorHandler.showSuccess(context, 'Order Received!');
+                                                        _fetchStatusCounts();
                                                       }
                                                     },
                                                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
@@ -286,6 +331,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                                       final success = await provider.changeOrderStatus(fullOrder.id, 5);
                                                       if (success && mounted) {
                                                         ErrorHandler.showSuccess(context, 'Cancellation requested.');
+                                                        _fetchStatusCounts();
                                                       }
                                                     },
                                                     style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
@@ -305,6 +351,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                                   final success = await provider.changeOrderStatus(fullOrder.id, 5);
                                                   if (success && mounted) {
                                                     ErrorHandler.showSuccess(context, 'Order cancelled successfully.');
+                                                    _fetchStatusCounts();
                                                   }
                                                 },
                                                 style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
@@ -319,7 +366,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                                                 Navigator.push(
                                                   context,
                                                   MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: fullOrder.id)),
-                                                ).then((_) => _fetchOrders());
+                                                ).then((_) {
+                                                  _fetchOrders();
+                                                  _fetchStatusCounts();
+                                                });
                                               },
                                               child: const Text('View Full Details'),
                                             ),

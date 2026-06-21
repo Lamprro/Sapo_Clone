@@ -444,7 +444,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Chào mừng bạn quay trở lại!',
+                      'Welcome back!',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.grey[600],
@@ -465,7 +465,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              'Đăng nhập tài khoản khách hàng',
+                              'Customer Login',
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey[800],
@@ -477,14 +477,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(height: 12),
                             CustomTextField(
                               controller: _usernameCtrl,
-                              label: 'Tên tài khoản',
+                              label: 'Username',
                               prefixIcon: Icons.person_outline,
                               validator: (v) =>
-                                  (v == null || v.trim().isEmpty) ? 'Vui lòng nhập tên tài khoản' : null,
+                                  (v == null || v.trim().isEmpty) ? 'Please enter your username' : null,
                             ),
                             CustomTextField(
                               controller: _passwordCtrl,
-                              label: 'Mật khẩu',
+                              label: 'Password',
                               prefixIcon: Icons.lock_outline,
                               obscureText: _obscurePassword,
                               suffixIcon: IconButton(
@@ -496,7 +496,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                               ),
                               validator: (v) =>
-                                  (v == null || v.isEmpty) ? 'Vui lòng nhập mật khẩu' : null,
+                                  (v == null || v.isEmpty) ? 'Please enter your password' : null,
                             ),
                             Align(
                               alignment: Alignment.centerRight,
@@ -507,7 +507,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
                                 child: Text(
-                                  'Quên mật khẩu?',
+                                  'Forgot password?',
                                   style: TextStyle(
                                     color: theme.colorScheme.primary,
                                     fontWeight: FontWeight.bold,
@@ -540,7 +540,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(height: 16),
                             ],
                             CustomButton(
-                              label: 'Đăng Nhập',
+                              label: 'Login',
                               onPressed: _handleLogin,
                               isLoading: auth.isLoading,
                               icon: Icons.login_rounded,
@@ -554,7 +554,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text("Bạn chưa có tài khoản? ", style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                          Text("Don't have an account? ", style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
                           TextButton(
                             onPressed: () {
                               auth.clearError();
@@ -565,7 +565,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: Text(
-                              'Đăng ký ngay',
+                              'Register now',
                               style: TextStyle(
                                 color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.bold,
@@ -603,7 +603,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(width: 12),
             Text(
-              'Đang tải danh sách công ty...',
+              'Loading companies...',
               style: TextStyle(color: Colors.grey[600], fontSize: 14),
             )
           ],
@@ -637,7 +637,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 });
                 _loadCompanies();
               },
-              child: const Text('Thử lại'),
+              child: const Text('Retry'),
             )
           ],
         ),
@@ -668,7 +668,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _selectedCompany != null
-                    ? Column(
+                     ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -689,7 +689,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       )
                     : Text(
-                        'Chọn công ty / cửa hàng',
+                        'Select company / store',
                         style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
               ),

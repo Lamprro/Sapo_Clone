@@ -51,19 +51,19 @@ class CustomerShellState extends State<CustomerShell> {
           final shouldExit = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Thoát ứng dụng'),
-              content: const Text('Bạn có chắc chắn muốn thoát khỏi ứng dụng?'),
+              title: const Text('Exit Application'),
+              content: const Text('Are you sure you want to exit the application?'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Hủy'),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                   ),
-                  child: const Text('Thoát'),
+                  child: const Text('Exit'),
                 ),
               ],
             ),
@@ -114,27 +114,27 @@ class CustomerShellState extends State<CustomerShell> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.home_rounded),
                 activeIcon: Icon(Icons.home_rounded),
-                label: 'Trang chủ',
+                label: 'Home',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.shopping_cart_rounded),
                 activeIcon: Icon(Icons.shopping_cart_rounded),
-                label: 'Giỏ hàng',
+                label: 'Cart',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.receipt_long_rounded),
                 activeIcon: Icon(Icons.receipt_long_rounded),
-                label: 'Đơn hàng',
+                label: 'Orders',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.notifications_rounded),
                 activeIcon: Icon(Icons.notifications_rounded),
-                label: 'Thông báo',
+                label: 'Notifications',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.person_rounded),
                 activeIcon: Icon(Icons.person_rounded),
-                label: 'Cá nhân',
+                label: 'Profile',
               ),
             ],
           ),
@@ -199,7 +199,7 @@ class _CustomerProfileMenu extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      user?.fullName ?? 'Khách Hàng',
+                      user?.fullName ?? 'Customer',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -208,7 +208,7 @@ class _CustomerProfileMenu extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      user?.email ?? 'Chưa cập nhật email',
+                      user?.email ?? 'Email not updated',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.white.withOpacity(0.85),
@@ -216,7 +216,7 @@ class _CustomerProfileMenu extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Vai trò: Khách Hàng',
+                      'Role: Customer',
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.white.withOpacity(0.7),
@@ -233,7 +233,7 @@ class _CustomerProfileMenu extends StatelessWidget {
 
         // Grouped Settings Menu
         Text(
-          'TÀI KHOẢN & TIỆN ÍCH',
+          'ACCOUNT & UTILITIES',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w900,
@@ -257,7 +257,7 @@ class _CustomerProfileMenu extends StatelessWidget {
                   decoration: BoxDecoration(color: theme.colorScheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                   child: Icon(Icons.person_outline_rounded, color: theme.colorScheme.primary, size: 20),
                 ),
-                title: const Text('Thông tin cá nhân', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                title: const Text('Personal Information', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
               ),
@@ -268,7 +268,7 @@ class _CustomerProfileMenu extends StatelessWidget {
                   decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.lock_outline_rounded, color: Colors.purple, size: 20),
                 ),
-                title: const Text('Đổi mật khẩu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
               ),
@@ -279,7 +279,7 @@ class _CustomerProfileMenu extends StatelessWidget {
                   decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.star_outline_rounded, color: Colors.orange, size: 20),
                 ),
-                title: const Text('Đánh giá của tôi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                title: const Text('My Ratings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRatingsScreen())),
               ),
@@ -301,7 +301,7 @@ class _CustomerProfileMenu extends StatelessWidget {
               decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
               child: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
             ),
-            title: const Text('Đăng xuất', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 14)),
+            title: const Text('Log out', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 14)),
             trailing: Icon(Icons.chevron_right_rounded, color: Colors.redAccent.withOpacity(0.4)),
             onTap: () => context.read<AuthProvider>().logout(),
           ),

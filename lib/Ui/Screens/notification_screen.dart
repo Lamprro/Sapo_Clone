@@ -68,7 +68,7 @@ class _NotificationScreenState extends State<NotificationScreen> with SingleTick
   String _timeAgo(DateTime dateTime) {
     final difference = DateTime.now().difference(dateTime);
     if (difference.inMinutes < 5) {
-      return 'Vừa xong';
+      return 'Just now';
     } else {
       return DateFormat('HH:mm dd/MM/yyyy').format(dateTime);
     }
@@ -200,14 +200,11 @@ class _NotificationScreenState extends State<NotificationScreen> with SingleTick
                 ),
               ),
               ...groupItems.map((notif) {
-                return InkWell(
-                  onTap: () {
-                    if (!notif.read) {
-                      provider.markAsRead(notif.id);
-                    }
-                  },
-                  child: _buildNotificationCard(notif, theme),
-                );
+                return _buildNotificationCard(notif, theme, () {
+                  if (!notif.read) {
+                    provider.markAsRead(notif.id);
+                  }
+                });
               }),
             ],
           );
@@ -216,90 +213,98 @@ class _NotificationScreenState extends State<NotificationScreen> with SingleTick
     );
   }
 
-  Widget _buildNotificationCard(AppNotification notification, ThemeData theme) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: notification.read
-                ? theme.colorScheme.surface.withAlpha(120)
-                : theme.colorScheme.primaryContainer.withAlpha(50),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: notification.read
-                  ? Colors.white12
-                  : theme.colorScheme.primary.withAlpha(60),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(15),
-                blurRadius: 6,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Loại notification icon
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _colorForType(notification.type).withAlpha(30),
-                  shape: BoxShape.circle,
+  Widget _buildNotificationCard(AppNotification notification, ThemeData theme, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+          child: InkWell(
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: notification.read
+                    ? theme.colorScheme.surface.withAlpha(120)
+                    : theme.colorScheme.primaryContainer.withAlpha(50),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: notification.read
+                      ? Colors.white12
+                      : theme.colorScheme.primary.withAlpha(60),
                 ),
-                child: Icon(
-                  _iconForType(notification.type),
-                  color: _colorForType(notification.type),
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Chi tiết
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      notification.title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: notification.read ? FontWeight.normal : FontWeight.bold,
-                        color: notification.read ? Colors.grey[700] : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      notification.message,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: notification.read ? Colors.grey[600] : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _timeAgo(notification.timestamp),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Chấm chưa đọc
-              if (!notification.read)
-                Container(
-                  margin: const EdgeInsets.only(top: 4, left: 8),
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(15),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
                   ),
-                ),
-            ],
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Loại notification icon
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _colorForType(notification.type).withAlpha(30),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _iconForType(notification.type),
+                      color: _colorForType(notification.type),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Chi tiết
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          notification.title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: notification.read ? FontWeight.normal : FontWeight.bold,
+                            color: notification.read ? Colors.grey[700] : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          notification.message,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: notification.read ? Colors.grey[600] : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _timeAgo(notification.timestamp),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Chấm chưa đọc (Keep width layout stable using Opacity)
+                  Opacity(
+                    opacity: !notification.read ? 1.0 : 0.0,
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

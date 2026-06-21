@@ -80,7 +80,7 @@ class ProductItemCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
-                            'Hết Hàng',
+                            'Out of Stock',
                             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
                           ),
                         ),
@@ -95,7 +95,7 @@ class ProductItemCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
-                            'Không Cửa Hàng',
+                            'No Store Assigned',
                             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
                           ),
                         ),
