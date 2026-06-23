@@ -113,6 +113,7 @@ public class ProductResponse implements Serializable {
                                 .description(product.getDescription())
                                 .avgStar(product.getAvgstar())
                                 .status(product.getStatus())
+                                .sellPriceOriginal(product.getSellPriceOriginal())
                                 .sellPrice(product.getSellPrice())
                                 .unitName(product.getUnit() != null ? product.getUnit().getUnitName() : null)
                                 .categoryNames(product.getCategoryList() != null ? product.getCategoryList().stream()
