@@ -269,6 +269,24 @@ class ProductProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Import products from Excel
+  Future<bool> importFromExcel(String filePath) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _service.importExcel(filePath);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Error importing Excel: ${ErrorHandler.getErrorMessage(e)}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   @override
   void dispose() {
     _searchDebounce?.cancel();

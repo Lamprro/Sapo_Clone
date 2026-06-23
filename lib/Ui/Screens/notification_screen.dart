@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../Providers/notification_provider.dart';
 import '../../models/notification.dart';
+import 'customer/order_detail_screen.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -201,15 +202,138 @@ class _NotificationScreenState extends State<NotificationScreen> with SingleTick
               ),
               ...groupItems.map((notif) {
                 return _buildNotificationCard(notif, theme, () {
-                  if (!notif.read) {
-                    provider.markAsRead(notif.id);
-                  }
+                  _showNotificationDetail(context, notif, provider);
                 });
               }),
             ],
           );
         },
       ),
+    );
+  }
+
+  void _showNotificationDetail(BuildContext context, AppNotification notification, NotificationProvider provider) {
+    if (!notification.read) {
+      provider.markAsRead(notification.id);
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final theme = Theme.of(context);
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _colorForType(notification.type).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _iconForType(notification.type),
+                        color: _colorForType(notification.type),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            notification.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            DateFormat('HH:mm dd/MM/yyyy').format(notification.timestamp),
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 12),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Text(
+                      notification.message,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+                if (notification.orderId != null) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => OrderDetailScreen(orderId: notification.orderId!),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.receipt_long_rounded),
+                      label: const Text('Xem chi tiết đơn hàng'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

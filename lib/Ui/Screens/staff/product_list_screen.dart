@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:sapo_clone_app_2/Providers/product_provider.dart';
 import 'package:sapo_clone_app_2/models/product.dart';
 import 'package:sapo_clone_app_2/services/product_service.dart';
@@ -92,6 +93,61 @@ class _ProductListStaffScreenState extends State<ProductListStaffScreen> {
     if (barcode != null && barcode.isNotEmpty) {
       _searchController.text = barcode;
       _triggerSearch();
+    }
+  }
+
+  Future<void> _importExcelFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+      );
+
+      if (result == null || result.files.single.path == null) {
+        return;
+      }
+
+      String filePath = result.files.single.path!;
+      
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final success = await context.read<ProductProvider>().importFromExcel(filePath);
+
+      if (!mounted) return;
+      Navigator.pop(context); // Dismiss loading HUD
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Excel file uploaded. Importing products in the background...'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _triggerSearch();
+      } else {
+        final error = context.read<ProductProvider>().errorMessage ?? 'Unknown error';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Import failed: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -426,6 +482,11 @@ class _ProductListStaffScreenState extends State<ProductListStaffScreen> {
       appBar: AppBar(
         title: const Text('Inventory & Products'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.file_upload),
+            onPressed: _importExcelFile,
+            tooltip: 'Import Excel',
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _triggerSearch),
         ],
       ),

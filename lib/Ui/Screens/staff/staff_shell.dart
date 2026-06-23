@@ -13,6 +13,7 @@ import 'provider_management_screen.dart';
 import '../notification_screen.dart';
 import '../../Widgets/notification_badge.dart';
 import '../../../Providers/notification_provider.dart';
+import '../../../Providers/order_provider.dart';
 import '../common/profile_screen.dart';
 import '../common/change_password_screen.dart';
 
@@ -27,6 +28,73 @@ class StaffShell extends StatefulWidget {
 
 class _StaffShellState extends State<StaffShell> {
   int _selectedIndex = 0;
+  int _previousNotificationCount = 0;
+  VoidCallback? _notificationListener;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+      _previousNotificationCount = notificationProvider.notifications.length;
+
+      _notificationListener = () {
+        if (!mounted) return;
+        final currentNotifications = notificationProvider.notifications;
+        if (currentNotifications.length > _previousNotificationCount) {
+          final newNotif = currentNotifications.first;
+          _previousNotificationCount = currentNotifications.length;
+
+          // Show SnackBar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(newNotif.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(newNotif.message, style: const TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.indigoAccent,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+
+          // If the new notification is related to orders, refresh order provider
+          if (newNotif.type.contains('ORDER') || newNotif.type.contains('PAYMENT')) {
+            try {
+              Provider.of<OrderProvider>(context, listen: false).fetchOrders();
+            } catch (_) {}
+          }
+        } else {
+          _previousNotificationCount = currentNotifications.length;
+        }
+      };
+
+      notificationProvider.addListener(_notificationListener!);
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_notificationListener != null) {
+      try {
+        Provider.of<NotificationProvider>(context, listen: false).removeListener(_notificationListener!);
+      } catch (_) {}
+    }
+    super.dispose();
+  }
 
   Widget _buildBody(int index) {
     switch (index) {

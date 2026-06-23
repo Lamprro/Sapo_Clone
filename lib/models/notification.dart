@@ -6,6 +6,7 @@ class AppNotification {
   final DateTime timestamp;
   bool read;
   final String? targetRole;
+  final int? orderId;
 
   AppNotification({
     required this.id,
@@ -15,6 +16,7 @@ class AppNotification {
     required this.timestamp,
     this.read = false,
     this.targetRole,
+    this.orderId,
   });
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,7 @@ class AppNotification {
           : (json['timestamp'] != null ? DateTime.parse(json['timestamp']) : DateTime.now()),
       read: json['read'] == true || json['isRead'] == true,
       targetRole: json['targetRole'],
+      orderId: (json['orderId'] as num?)?.toInt(),
     );
   }
 
@@ -40,6 +43,7 @@ class AppNotification {
       'timestamp': timestamp.toIso8601String(),
       'read': read,
       'targetRole': targetRole,
+      'orderId': orderId,
     };
   }
 }

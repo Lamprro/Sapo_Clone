@@ -117,4 +117,13 @@ class ProductService {
   Future<void> deleteImage(int productId, int imageId) async {
     await _dio.delete('/api/product/$productId/images/$imageId');
   }
+
+  /// Import products from Excel file (.xlsx)
+  Future<String> importExcel(String filePath) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+    });
+    final response = await _dio.post('/api/product/import', data: formData);
+    return response.data['message'] as String;
+  }
 }
