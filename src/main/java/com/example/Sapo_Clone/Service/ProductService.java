@@ -32,4 +32,6 @@ public interface ProductService {
     List<ProductReportProjection> getReportAll();
 
     ProductReportDetailResponse getReportByProduct(int productId, int page, int size);
+
+    void importProductsAsync(byte[] fileBytes, int userId, int companyId, int storeId, String role);
 }

@@ -34,7 +34,7 @@ public class NotificationServiceImpl implements NotificationService {
             // Push to specific user (since userId is globally unique)
             messagingTemplate.convertAndSendToUser(
                 saved.getTargetUserId().toString(), 
-                "/topic/notifications", 
+                "/queue/notifications", 
                 saved
             );
         } else if (saved.getTargetRole() != null) {

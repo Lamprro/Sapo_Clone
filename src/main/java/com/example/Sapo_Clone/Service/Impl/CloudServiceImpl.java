@@ -23,7 +23,7 @@ public class CloudServiceImpl implements CloudService {
 
     private final Cloudinary cloudinary;
 
-    private final ProductServiceImpl productService;
+    private final org.springframework.cache.CacheManager cacheManager;
 
     @Override
     @Async("imageUploadExecutor")
@@ -60,7 +60,13 @@ public class CloudServiceImpl implements CloudService {
             String publicId = uploadResult.get("public_id").toString();
 
             log.info("Upload successful. Public ID: {}", publicId);
-            productService.clearProductListCaches();
+            try {
+                if (cacheManager.getCache("product:list:manage") != null) cacheManager.getCache("product:list:manage").clear();
+                if (cacheManager.getCache("product:list:customer") != null) cacheManager.getCache("product:list:customer").clear();
+                if (cacheManager.getCache("product:store") != null) cacheManager.getCache("product:store").clear();
+            } catch (Exception ex) {
+                log.warn("Failed to clear product list caches in CloudServiceImpl", ex);
+            }
             return new CloudResponse(imageUrl, publicId);
 
         } catch (IOException e) {

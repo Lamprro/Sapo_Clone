@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deployment>
+    <!-- Configure directories to be created during deploy or startup -->
+    <directories>
+        <directory name="temp_images" description="Folder to temporarily store downloaded product images before uploading to Cloudinary" />
+    </directories>
+</deployment>

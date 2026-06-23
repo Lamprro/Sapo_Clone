@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
+import com.example.Sapo_Clone.Utils.SecurityUtils;
 
 @RestController
 @RequestMapping("/api/product")
@@ -120,5 +122,30 @@ public class ProductController {
         log.info("API GET /api/product/store");
         Page<ProductResponse> response = productService.getProductsByStore(page,size);
         return ResponseEntity.ok(ApiResponse.success("Success", response));
+    }
+
+    // 10. IMPORT PRODUCTS FROM EXCEL
+    @PostMapping(value = "/import", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<String>> importProducts(@RequestParam("file") MultipartFile file) {
+        log.info("API POST /api/product/import filename={}", file.getOriginalFilename());
+        
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Please upload a non-empty Excel file."));
+        }
+        
+        try {
+            byte[] fileBytes = file.getBytes();
+            int userId = SecurityUtils.getCurrentUserId();
+            int companyId = SecurityUtils.getCurrentCompanyId();
+            int storeId = SecurityUtils.getCurrentStoreId();
+            String role = SecurityUtils.getCurrentRole();
+            
+            productService.importProductsAsync(fileBytes, userId, companyId, storeId, role);
+            
+            return ResponseEntity.ok(ApiResponse.success("Import process started. You will be notified when it completes.", null));
+        } catch (java.io.IOException e) {
+            log.error("Failed to read uploaded Excel file", e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("Failed to read uploaded Excel file: " + e.getMessage()));
+        }
     }
 }

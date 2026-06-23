@@ -31,6 +31,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+// Apache POI and Input/Output/Network Utility Imports
+import org.apache.poi.ss.usermodel.*;
+import java.io.ByteArrayInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+import org.springframework.scheduling.annotation.Async;
+import com.example.Sapo_Clone.Enum.NotificationType;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -44,6 +58,9 @@ public class ProductServiceImpl implements ProductService {
     private final com.example.Sapo_Clone.Repository.OrderDetailRepository orderDetailRepository;
     private final com.example.Sapo_Clone.Repository.StoreRepository storeRepository;
     private final org.springframework.cache.CacheManager cacheManager;
+    private final com.example.Sapo_Clone.Service.CloudService cloudService;
+    private final com.example.Sapo_Clone.Service.NotificationService notificationService;
+    private final com.example.Sapo_Clone.Repository.ProductImageRepository productImageRepository;
 
     @Override
     @Transactional
@@ -359,5 +376,367 @@ public class ProductServiceImpl implements ProductService {
         } catch (Exception e) {
             log.warn("Failed to clear product detail cache for product " + productId, e);
         }
+    }
+
+    @Override
+    @Async("imageUploadExecutor")
+    @Transactional
+    public void importProductsAsync(byte[] fileBytes, int userId, int companyId, int storeId, String role) {
+        log.info("Starting asynchronous product import from Excel. userId={}, companyId={}, storeId={}", userId, companyId, storeId);
+        
+        List<String> uploadedCloudinaryPublicIds = new ArrayList<>();
+        List<Path> tempImagePaths = new ArrayList<>();
+        
+        // Ensure the temp directory exists
+        Path tempDir = Paths.get("temp_images");
+        try {
+            if (!Files.exists(tempDir)) {
+                Files.createDirectories(tempDir);
+                log.info("Created temporary images directory: {}", tempDir.toAbsolutePath());
+            }
+        } catch (Exception e) {
+            log.error("Failed to create temporary images directory", e);
+            sendImportNotification(userId, companyId, role, false, "Failed to initialize temp directory: " + e.getMessage());
+            return;
+        }
+
+        try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(fileBytes))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            if (sheet.getPhysicalNumberOfRows() <= 1) {
+                throw new IllegalArgumentException("The Excel sheet is empty or has no data rows.");
+            }
+
+            // Read header row (Row 0)
+            Row headerRow = sheet.getRow(0);
+            if (headerRow == null) {
+                throw new IllegalArgumentException("Header row is missing.");
+            }
+
+            // Map header names to column indexes
+            int nameColIdx = -1;
+            int descColIdx = -1;
+            int barcodeColIdx = -1;
+            int importPriceColIdx = -1;
+            int sellPriceOriginalColIdx = -1;
+            int sellPriceColIdx = -1;
+            int unitColIdx = -1;
+            int categoryColIdx = -1;
+            List<Integer> pictureColIdxs = new ArrayList<>();
+
+            for (int col = 0; col < headerRow.getLastCellNum(); col++) {
+                Cell cell = headerRow.getCell(col);
+                if (cell == null) continue;
+                String header = getCellStringValue(cell).toLowerCase();
+                if (header.isEmpty()) continue;
+
+                if (header.equals("product name") || header.equals("tên sản phẩm") || header.equals("ten san pham")) {
+                    nameColIdx = col;
+                } else if (header.equals("description") || header.equals("mô tả") || header.equals("mo ta")) {
+                    descColIdx = col;
+                } else if (header.equals("barcode") || header.equals("mã vạch") || header.equals("ma vach")) {
+                    barcodeColIdx = col;
+                } else if (header.equals("import price") || header.equals("giá nhập") || header.equals("gia nhap")) {
+                    importPriceColIdx = col;
+                } else if (header.equals("sell price original") || header.equals("giá bán gốc") || header.equals("gia ban goc")) {
+                    sellPriceOriginalColIdx = col;
+                } else if (header.equals("sell price") || header.equals("giá bán") || header.equals("gia ban")) {
+                    sellPriceColIdx = col;
+                } else if (header.equals("unit") || header.equals("đơn vị") || header.equals("don vi")) {
+                    unitColIdx = col;
+                } else if (header.equals("category") || header.equals("danh mục") || header.equals("danh muc")) {
+                    categoryColIdx = col;
+                } else if (header.startsWith("picture") || header.startsWith("hình ảnh") || header.startsWith("hinh anh")) {
+                    pictureColIdxs.add(col);
+                }
+            }
+
+            // Validate mandatory headers
+            if (nameColIdx == -1) throw new IllegalArgumentException("Missing 'Product Name' column in Excel.");
+            if (barcodeColIdx == -1) throw new IllegalArgumentException("Missing 'Barcode' column in Excel.");
+            if (importPriceColIdx == -1) throw new IllegalArgumentException("Missing 'Import Price' column in Excel.");
+            if (sellPriceOriginalColIdx == -1) throw new IllegalArgumentException("Missing 'Sell Price Original' column in Excel.");
+            if (sellPriceColIdx == -1) throw new IllegalArgumentException("Missing 'Sell Price' column in Excel.");
+            if (unitColIdx == -1) throw new IllegalArgumentException("Missing 'Unit' column in Excel.");
+
+            Company company = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
+
+            // Parse each row
+            for (int r = 1; r <= sheet.getLastRowNum(); r++) {
+                Row row = sheet.getRow(r);
+                if (row == null) continue;
+
+                // Check if the row is empty (at least Name and Barcode are blank)
+                String productName = getCellStringValue(row.getCell(nameColIdx));
+                String barcode = getCellStringValue(row.getCell(barcodeColIdx));
+                if (productName.isEmpty() && barcode.isEmpty()) {
+                    continue; // Skip empty row
+                }
+
+                if (productName.isEmpty()) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Product Name cannot be blank.");
+                }
+                if (barcode.isEmpty()) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Barcode cannot be blank.");
+                }
+                if (!barcode.matches("[a-zA-Z0-9-_]+")) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Barcode '" + barcode + "' contains invalid characters.");
+                }
+                if (productRepository.existsByCompany_IdAndBarcode(companyId, barcode)) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Barcode '" + barcode + "' already exists for this company.");
+                }
+
+                // Prices
+                Double importPrice = getCellDoubleValue(row.getCell(importPriceColIdx));
+                Double sellPriceOriginal = getCellDoubleValue(row.getCell(sellPriceOriginalColIdx));
+                Double sellPrice = getCellDoubleValue(row.getCell(sellPriceColIdx));
+
+                if (importPrice == null || importPrice < 0) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Import Price must be >= 0.");
+                }
+                if (sellPriceOriginal == null || sellPriceOriginal < 0) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Original Sell Price must be >= 0.");
+                }
+                if (sellPrice == null || sellPrice < 0) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Sell Price must be >= 0.");
+                }
+                if (sellPriceOriginal < importPrice) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Original Sell Price cannot be less than Import Price.");
+                }
+                if (sellPrice < importPrice) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Sell Price cannot be less than Import Price.");
+                }
+                if (sellPrice > sellPriceOriginal) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Sell Price cannot exceed Original Sell Price.");
+                }
+
+                // Unit
+                String unitName = getCellStringValue(row.getCell(unitColIdx));
+                if (unitName.isEmpty()) {
+                    throw new IllegalArgumentException("Row " + (r + 1) + ": Unit cannot be blank.");
+                }
+                Unit unit = unitRepository.findByUnitName(unitName)
+                        .orElseGet(() -> {
+                            Unit newUnit = new Unit();
+                            newUnit.setUnitName(unitName);
+                            newUnit.setDescription("Imported from Excel");
+                            return unitRepository.save(newUnit);
+                        });
+
+                // Categories
+                List<Category> categories = new ArrayList<>();
+                if (categoryColIdx != -1) {
+                    String catsStr = getCellStringValue(row.getCell(categoryColIdx));
+                    if (!catsStr.isEmpty()) {
+                        String[] catNames = catsStr.split("[,;]");
+                        for (String catName : catNames) {
+                            String trimmedCatName = catName.trim();
+                            if (trimmedCatName.isEmpty()) continue;
+                            Category category = categoryRepository.findByCategoryName(trimmedCatName)
+                                    .orElseGet(() -> {
+                                        Category newCat = new Category();
+                                        newCat.setCategoryName(trimmedCatName);
+                                        newCat.setDescription("Imported from Excel");
+                                        return categoryRepository.save(newCat);
+                                    });
+                            categories.add(category);
+                        }
+                    }
+                }
+
+                // Description
+                String description = descColIdx != -1 ? getCellStringValue(row.getCell(descColIdx)) : "";
+
+                // Pictures URLs
+                List<String> imageUrls = new ArrayList<>();
+                for (int pIdx : pictureColIdxs) {
+                    String imgUrl = getCellStringValue(row.getCell(pIdx));
+                    if (!imgUrl.isEmpty()) {
+                        imageUrls.add(imgUrl);
+                    }
+                }
+
+                // Build Product
+                Product product = new Product();
+                product.setProductName(productName);
+                product.setDescription(description);
+                product.setBarcode(barcode);
+                product.setImportPrice(importPrice);
+                product.setSellPriceOriginal(sellPriceOriginal);
+                product.setSellPrice(sellPrice);
+                product.setUnit(unit);
+                product.setCategoryList(categories);
+                product.setStatus(1); // ACTIVE
+                product.setAvgstar(0.0);
+                product.setCompany(company);
+
+                // Save product first so we have the ID
+                Product savedProduct = productRepository.save(product);
+
+                // Initialize inventory
+                List<Store> stores = storeRepository.findByCompanyId(companyId);
+                if (stores != null) {
+                    for (Store store : stores) {
+                        Inventory inventory = new Inventory();
+                        inventory.setProduct(savedProduct);
+                        inventory.setStore(store);
+                        inventory.setQuantity(0);
+                        inventoryRepository.save(inventory);
+                    }
+                }
+
+                // Handle downloading and uploading images
+                List<ProductImage> productImagesList = new ArrayList<>();
+                for (int i = 0; i < imageUrls.size(); i++) {
+                    String imageUrl = imageUrls.get(i);
+                    String tempFilename = "prod_" + savedProduct.getId() + "_" + i + "_" + UUID.randomUUID().toString().substring(0, 8) + ".jpg";
+                    Path tempFile = tempDir.resolve(tempFilename);
+                    
+                    log.info("Downloading image from URL: {} to {}", imageUrl, tempFile.toAbsolutePath());
+                    try {
+                        downloadImage(imageUrl, tempFile);
+                        tempImagePaths.add(tempFile);
+                        
+                        // Upload to Cloudinary
+                        byte[] imgBytes = Files.readAllBytes(tempFile);
+                        var cloudResponse = cloudService.uploadToCloud(imgBytes, tempFilename);
+                        uploadedCloudinaryPublicIds.add(cloudResponse.getPublicId());
+
+                        ProductImage img = new ProductImage();
+                        img.setImageUrl(cloudResponse.getImageUrl());
+                        img.setPublicId(cloudResponse.getPublicId());
+                        img.setStatus(i == 0 ? 2 : 1); // 2 is main, 1 is regular
+                        img.setProduct(savedProduct);
+                        productImageRepository.save(img);
+                        productImagesList.add(img);
+
+                        // Clean up downloaded temp file immediately
+                        Files.deleteIfExists(tempFile);
+                        tempImagePaths.remove(tempFile);
+                    } catch (Exception imgEx) {
+                        log.error("Failed to download/upload image: {}", imageUrl, imgEx);
+                        throw new RuntimeException("Failed to download/upload image from URL '" + imageUrl + "': " + imgEx.getMessage());
+                    }
+                }
+                savedProduct.setProductImages(productImagesList);
+            }
+
+            clearProductListCaches();
+            sendImportNotification(userId, companyId, role, true, "Import product success");
+            log.info("Product import completed successfully for companyId={}", companyId);
+
+        } catch (Exception e) {
+            log.error("Error occurred during Excel product import, rolling back", e);
+            
+            // Clean up uploaded Cloudinary images to avoid garbage
+            for (String publicId : uploadedCloudinaryPublicIds) {
+                try {
+                    cloudService.deleteFromCloud(publicId);
+                } catch (Exception cleanEx) {
+                    log.error("Failed to clean up Cloudinary image: {}", publicId, cleanEx);
+                }
+            }
+
+            // Clean up local temp files if any remaining
+            for (Path tempFile : tempImagePaths) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (Exception cleanEx) {
+                    log.error("Failed to delete temp file: {}", tempFile, cleanEx);
+                }
+            }
+
+            sendImportNotification(userId, companyId, role, false, "Import product failed: " + e.getMessage());
+            throw new RuntimeException(e.getMessage(), e); // Throw exception to rollback transactional DB state
+        }
+    }
+
+    private void downloadImage(String urlStr, Path targetPath) throws Exception {
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(10000);
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+
+        int responseCode = conn.getResponseCode();
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            throw new RuntimeException("HTTP error code: " + responseCode);
+        }
+
+        try (InputStream in = conn.getInputStream();
+             FileOutputStream out = new FileOutputStream(targetPath.toFile())) {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer)) != -1) {
+                out.write(buffer, 0, bytesRead);
+            }
+        }
+    }
+
+    private void sendImportNotification(int userId, int companyId, String role, boolean success, String message) {
+        try {
+            Notification notification = Notification.builder()
+                    .title(success ? "Import Product Success" : "Import Product Failed")
+                    .message(message)
+                    .type(NotificationType.ADMIN_ALERT)
+                    .targetUserId(userId)
+                    .targetRole(role)
+                    .companyId(companyId)
+                    .isRead(false)
+                    .build();
+            notificationService.createNotification(notification);
+        } catch (Exception ex) {
+            log.error("Failed to create import notification", ex);
+        }
+    }
+
+    private String getCellStringValue(Cell cell) {
+        if (cell == null) {
+            return "";
+        }
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue().trim();
+            case NUMERIC:
+                double val = cell.getNumericCellValue();
+                if (val == (long) val) {
+                    return String.valueOf((long) val);
+                }
+                return String.valueOf(val);
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            case FORMULA:
+                try {
+                    return cell.getStringCellValue().trim();
+                } catch (Exception e) {
+                    double fVal = cell.getNumericCellValue();
+                    if (fVal == (long) fVal) {
+                        return String.valueOf((long) fVal);
+                    }
+                    return String.valueOf(fVal);
+                }
+            case BLANK:
+            default:
+                return "";
+        }
+    }
+
+    private Double getCellDoubleValue(Cell cell) {
+        if (cell == null) {
+            return null;
+        }
+        if (cell.getCellType() == CellType.NUMERIC) {
+            return cell.getNumericCellValue();
+        } else if (cell.getCellType() == CellType.STRING) {
+            String val = cell.getStringCellValue().trim();
+            if (val.isEmpty()) return null;
+            try {
+                return Double.parseDouble(val);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }

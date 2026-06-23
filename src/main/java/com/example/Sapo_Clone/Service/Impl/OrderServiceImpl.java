@@ -562,6 +562,30 @@ public class OrderServiceImpl implements OrderService {
                     .build());
         }
 
+        // If updated by a Customer (receive/cancel), notify MANAGER and EMPLOYEE
+        if (isCustomer) {
+            String title = newStatus == STATUS_COMPLETED ? "Order Completed by Customer" : "Order Cancelled by Customer";
+            String msg = "Order #" + savedOrder.getId() + " has been " + (newStatus == STATUS_COMPLETED ? "completed" : "cancelled") + " by " + (savedOrder.getCustomer() != null ? savedOrder.getCustomer().getUserFullName() : "Customer");
+            
+            // Notify MANAGER
+            eventPublisher.publishEvent(Notification.builder()
+                    .title(title)
+                    .message(msg)
+                    .type(NotificationType.ORDER_STATUS_UPDATE)
+                    .targetRole("MANAGER")
+                    .companyId(companyId)
+                    .build());
+                    
+            // Notify EMPLOYEE
+            eventPublisher.publishEvent(Notification.builder()
+                    .title(title)
+                    .message(msg)
+                    .type(NotificationType.ORDER_STATUS_UPDATE)
+                    .targetRole("EMPLOYEE")
+                    .companyId(companyId)
+                    .build());
+        }
+
         return OrderResponse.fromEntity(savedOrder);
     }
 

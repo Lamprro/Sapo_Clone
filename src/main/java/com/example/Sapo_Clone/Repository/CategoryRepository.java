@@ -10,11 +10,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Integer> {
     // findAllById is inherited from JpaRepository — used to validate categoryIds
     List<Category> findAllByIdIn(List<Integer> categoryIds);
+
+    Optional<Category> findByCategoryName(String categoryName);
 
     @Query("SELECT c FROM Category c WHERE LOWER(c.categoryName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<Category> searchByName(@Param("keyword") String keyword, Pageable pageable);
