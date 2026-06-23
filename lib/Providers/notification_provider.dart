@@ -53,12 +53,12 @@ class NotificationProvider with ChangeNotifier {
     final baseUrl = ApiService.instance.dio.options.baseUrl;
     String wsUrl;
     if (baseUrl.startsWith('https://')) {
-      wsUrl = '${baseUrl.replaceFirst('https://', 'wss://')}/ws/websocket';
+      wsUrl = '${baseUrl.replaceFirst('https://', 'wss://')}/ws';
     } else if (baseUrl.startsWith('http://')) {
-      wsUrl = '${baseUrl.replaceFirst('http://', 'ws://')}/ws/websocket';
+      wsUrl = '${baseUrl.replaceFirst('http://', 'ws://')}/ws';
     } else {
       // Fallback
-      wsUrl = 'ws://localhost:8080/ws/websocket';
+      wsUrl = 'ws://localhost:8080/ws';
     }
 
     final token = ApiService.instance.authToken;
@@ -87,6 +87,10 @@ class NotificationProvider with ChangeNotifier {
         },
         stompConnectHeaders: stompHeaders,
         webSocketConnectHeaders: webSocketHeaders,
+        reconnectDelay: const Duration(seconds: 5),
+        connectionTimeout: const Duration(seconds: 10),
+        heartbeatIncoming: const Duration(seconds: 10),
+        heartbeatOutgoing: const Duration(seconds: 10),
       ),
     );
     _stompClient?.activate();
@@ -108,7 +112,7 @@ class NotificationProvider with ChangeNotifier {
 
     // 1. Subscribe to user unicast queue
     _stompClient?.subscribe(
-      destination: '/user/topic/notifications',
+      destination: '/user/queue/notifications',
       callback: _onNotificationReceived,
     );
 

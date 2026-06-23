@@ -157,13 +157,32 @@ class ProductItemCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Text(
-                            CurrencyFormat.format(product.sellPrice ?? 0),
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: isActionDisabled ? Colors.grey : theme.colorScheme.primary,
-                              fontWeight: FontWeight.w900,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (product.sellPrice != null &&
+                                  product.sellPriceOriginal != null &&
+                                  product.sellPrice! < product.sellPriceOriginal!) ...[
+                                Text(
+                                  CurrencyFormat.format(product.sellPriceOriginal!),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade500,
+                                    decoration: TextDecoration.lineThrough,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                              ],
+                              Text(
+                                CurrencyFormat.format(product.sellPrice ?? 0),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: isActionDisabled ? Colors.grey : theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         InkWell(

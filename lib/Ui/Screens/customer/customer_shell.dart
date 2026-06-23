@@ -10,6 +10,7 @@ import 'my_orders_screen.dart';
 import '../notification_screen.dart';
 import '../../Widgets/notification_badge.dart';
 import '../../../Providers/notification_provider.dart';
+import '../../../Providers/order_provider.dart';
 
 import 'package:flutter/services.dart';
 
@@ -22,6 +23,73 @@ class CustomerShell extends StatefulWidget {
 
 class CustomerShellState extends State<CustomerShell> {
   int _currentIndex = 0;
+  int _previousNotificationCount = 0;
+  VoidCallback? _notificationListener;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+      _previousNotificationCount = notificationProvider.notifications.length;
+
+      _notificationListener = () {
+        if (!mounted) return;
+        final currentNotifications = notificationProvider.notifications;
+        if (currentNotifications.length > _previousNotificationCount) {
+          final newNotif = currentNotifications.first;
+          _previousNotificationCount = currentNotifications.length;
+
+          // Show SnackBar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(newNotif.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(newNotif.message, style: const TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.blueAccent,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+
+          // If the new notification is related to orders or payments, refresh order provider
+          if (newNotif.type.contains('ORDER') || newNotif.type.contains('PAYMENT')) {
+            try {
+              Provider.of<OrderProvider>(context, listen: false).fetchOrders();
+            } catch (_) {}
+          }
+        } else {
+          _previousNotificationCount = currentNotifications.length;
+        }
+      };
+
+      notificationProvider.addListener(_notificationListener!);
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_notificationListener != null) {
+      try {
+        Provider.of<NotificationProvider>(context, listen: false).removeListener(_notificationListener!);
+      } catch (_) {}
+    }
+    super.dispose();
+  }
 
   void setIndex(int index) {
     setState(() {
@@ -110,28 +178,48 @@ class CustomerShellState extends State<CustomerShell> {
             selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
             unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
             elevation: 0,
-            items: const [
-              BottomNavigationBarItem(
+            items: [
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.home_rounded),
                 activeIcon: Icon(Icons.home_rounded),
                 label: 'Home',
               ),
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.shopping_cart_rounded),
                 activeIcon: Icon(Icons.shopping_cart_rounded),
                 label: 'Cart',
               ),
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.receipt_long_rounded),
                 activeIcon: Icon(Icons.receipt_long_rounded),
                 label: 'Orders',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.notifications_rounded),
-                activeIcon: Icon(Icons.notifications_rounded),
+                icon: Consumer<NotificationProvider>(
+                  builder: (context, provider, child) {
+                    final count = provider.unreadCount;
+                    return count > 0
+                        ? Badge(
+                            label: Text(count > 99 ? '99+' : count.toString()),
+                            child: const Icon(Icons.notifications_rounded),
+                          )
+                        : const Icon(Icons.notifications_rounded);
+                  },
+                ),
+                activeIcon: Consumer<NotificationProvider>(
+                  builder: (context, provider, child) {
+                    final count = provider.unreadCount;
+                    return count > 0
+                        ? Badge(
+                            label: Text(count > 99 ? '99+' : count.toString()),
+                            child: const Icon(Icons.notifications_rounded),
+                          )
+                        : const Icon(Icons.notifications_rounded);
+                  },
+                ),
                 label: 'Notifications',
               ),
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.person_rounded),
                 activeIcon: Icon(Icons.person_rounded),
                 label: 'Profile',

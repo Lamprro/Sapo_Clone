@@ -93,14 +93,41 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(width: 16),
-                      Text(
-                        CurrencyFormat.format(widget.product.sellPrice ?? 0),
-                        style: TextStyle(
-                          fontSize: 24,
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
+                      if (widget.product.sellPrice != null &&
+                          widget.product.sellPriceOriginal != null &&
+                          widget.product.sellPrice! < widget.product.sellPriceOriginal!) ...[
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              CurrencyFormat.format(widget.product.sellPriceOriginal!),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade500,
+                                decoration: TextDecoration.lineThrough,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              CurrencyFormat.format(widget.product.sellPrice ?? 0),
+                              style: TextStyle(
+                                fontSize: 24,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                      ] else
+                        Text(
+                          CurrencyFormat.format(widget.product.sellPrice ?? 0),
+                          style: TextStyle(
+                            fontSize: 24,
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                     ],
                   ),
                   const Divider(height: 32),
