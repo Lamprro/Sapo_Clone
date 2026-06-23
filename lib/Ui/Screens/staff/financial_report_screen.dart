@@ -381,26 +381,26 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
                 children: data.asMap().entries.map((entry) {
                   final index = entry.key;
                   final metric = entry.value;
-                  final normalized = maxValue <= 0 ? 0.0 : metric.value / maxValue;
-                  final color = colors[index % colors.length];
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              _formatValue(metric.value), 
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
-                              maxLines: 1,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            height: 120 * normalized,
-                            decoration: BoxDecoration(
+                   final normalized = maxValue <= 0 ? 0.0 : (metric.value / maxValue).clamp(0.0, double.infinity);
+                   final color = colors[index % colors.length];
+                   return Expanded(
+                     child: Padding(
+                       padding: const EdgeInsets.symmetric(horizontal: 8),
+                       child: Column(
+                         mainAxisAlignment: MainAxisAlignment.end,
+                         children: [
+                           FittedBox(
+                             fit: BoxFit.scaleDown,
+                             child: Text(
+                               _formatValue(metric.value), 
+                               style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                               maxLines: 1,
+                             ),
+                           ),
+                           const SizedBox(height: 8),
+                           Container(
+                             height: (120 * normalized).clamp(0.0, 120.0),
+                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [color, color.withOpacity(0.5)],
                                 begin: Alignment.topCenter,

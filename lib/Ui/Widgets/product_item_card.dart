@@ -136,12 +136,31 @@ class ProductItemCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        CurrencyFormat.format(product.sellPrice ?? 0),
-                        style: TextStyle(
-                          color: isActionDisabled ? Colors.grey : Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                       Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (product.sellPrice != null &&
+                              product.sellPriceOriginal != null &&
+                              product.sellPrice! < product.sellPriceOriginal!) ...[
+                            Text(
+                              CurrencyFormat.format(product.sellPriceOriginal!),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade500,
+                                decoration: TextDecoration.lineThrough,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                          ],
+                          Text(
+                            CurrencyFormat.format(product.sellPrice ?? 0),
+                            style: TextStyle(
+                              color: isActionDisabled ? Colors.grey : Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                       IconButton(
                         icon: Icon(
