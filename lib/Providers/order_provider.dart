@@ -14,6 +14,9 @@ class OrderProvider with ChangeNotifier {
   int? _expandedOrderId;
   OrderResponse? _expandedOrder;
   int? _lastStatus; // Remembers the last status fetched
+  int _currentPage = 0;
+  int _totalPages = 1;
+  String _searchKeyword = '';
 
   List<OrderListResponse> get orders => _orders;
   List<OrderResponse> get lastCreatedOrders => _lastCreatedOrders;
@@ -21,22 +24,28 @@ class OrderProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   int? get expandedOrderId => _expandedOrderId;
   OrderResponse? get expandedOrder => _expandedOrder;
+  int get currentPage => _currentPage;
+  int get totalPages => _totalPages;
 
   String? _lastKeyword;
 
-  Future<void> fetchOrders({int? status, String? keyword}) async {
+  Future<void> fetchOrders({int? status, String? keyword, int page = 0, int size = 10}) async {
     _isLoading = true;
     _errorMessage = null;
     _lastStatus = status;
     _lastKeyword = keyword;
+    _currentPage = page;
+    _searchKeyword = keyword ?? '';
     notifyListeners();
     try {
-      final page = await _service.getList(
+      final pageResponse = await _service.getList(
         status: status, 
         keyword: keyword, 
-        size: 50
+        page: page,
+        size: size
       );
-      _orders = page.content;
+      _orders = pageResponse.content;
+      _totalPages = pageResponse.totalPages;
     } catch (e) {
       _errorMessage = "Error fetching orders: ${ErrorHandler.getErrorMessage(e)}";
     } finally {
@@ -89,7 +98,7 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
     try {
       await _service.changeStatus(orderId, 5); // 5 = CANCELLED
-      await fetchOrders(status: _lastStatus, keyword: _lastKeyword); // Refresh with the correct tab and keyword
+      await fetchOrders(status: _lastStatus, keyword: _lastKeyword, page: _currentPage); // Refresh with the correct tab and keyword
       return true;
     } catch (e) {
       _errorMessage = "Error cancelling order: ${ErrorHandler.getErrorMessage(e)}";
@@ -106,7 +115,7 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
     try {
       await _service.changeStatus(orderId, 4); // 4 = COMPLETED
-      await fetchOrders(status: _lastStatus, keyword: _lastKeyword); // Refresh with the correct current tab
+      await fetchOrders(status: _lastStatus, keyword: _lastKeyword, page: _currentPage); // Refresh with the correct current tab
       return true;
     } catch (e) {
       _errorMessage = "Error confirming: ${ErrorHandler.getErrorMessage(e)}";
@@ -145,7 +154,7 @@ class OrderProvider with ChangeNotifier {
       if (_expandedOrderId == orderId) {
         _expandedOrder = await _service.getOrder(orderId);
       }
-      await fetchOrders(status: _lastStatus, keyword: _lastKeyword);
+      await fetchOrders(status: _lastStatus, keyword: _lastKeyword, page: _currentPage);
       return true;
     } catch (e) {
       _errorMessage = "Error changing status: ${ErrorHandler.getErrorMessage(e)}";
@@ -165,7 +174,7 @@ class OrderProvider with ChangeNotifier {
       if (_expandedOrderId == orderId) {
         _expandedOrder = await _service.getOrder(orderId);
       }
-      await fetchOrders(status: _lastStatus, keyword: _lastKeyword);
+      await fetchOrders(status: _lastStatus, keyword: _lastKeyword, page: _currentPage);
       return true;
     } catch (e) {
       _errorMessage = "Error changing payment status: ${ErrorHandler.getErrorMessage(e)}";
@@ -182,7 +191,7 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
     try {
       await _service.createDisposeOrder(dto);
-      await fetchOrders(status: _lastStatus, keyword: _lastKeyword);
+      await fetchOrders(status: _lastStatus, keyword: _lastKeyword, page: _currentPage);
       return true;
     } catch (e) {
       _errorMessage = "Error creating inventory disposal order: ${ErrorHandler.getErrorMessage(e)}";
@@ -190,6 +199,28 @@ class OrderProvider with ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// Go to next page
+  Future<void> nextPage() async {
+    if (_currentPage < _totalPages - 1) {
+      await fetchOrders(
+        status: _lastStatus,
+        keyword: _lastKeyword,
+        page: _currentPage + 1,
+      );
+    }
+  }
+
+  /// Go to previous page
+  Future<void> previousPage() async {
+    if (_currentPage > 0) {
+      await fetchOrders(
+        status: _lastStatus,
+        keyword: _lastKeyword,
+        page: _currentPage - 1,
+      );
     }
   }
 

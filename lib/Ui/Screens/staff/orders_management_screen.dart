@@ -270,235 +270,263 @@ class _OrdersManagementScreenState extends State<OrdersManagementScreen> {
             ),
           ),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async => _fetch(),
-              child: provider.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : provider.errorMessage != null
-                      ? Center(child: Text(provider.errorMessage!, style: const TextStyle(color: Colors.red)))
-                      : provider.orders.isEmpty
-                          ? const Center(child: Text('No orders found.'))
-                          : ListView.separated(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: provider.orders.length,
-                                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                final order = provider.orders[index];
-                                    final isExpanded = provider.expandedOrderId == order.id;
-                                    final fullOrder = isExpanded ? provider.expandedOrder : null;
-                                    final canEdit = _canStaffEditStatus(order.status);
-
-                                return Card(
-                                  elevation: 2,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  child: Padding(
+            child: provider.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : provider.errorMessage != null
+                    ? Center(child: Text(provider.errorMessage!, style: const TextStyle(color: Colors.red)))
+                    : provider.orders.isEmpty
+                        ? const Center(child: Text('No orders found.'))
+                        : Column(
+                            children: [
+                              Expanded(
+                                child: RefreshIndicator(
+                                  onRefresh: () async => _fetch(),
+                                  child: ListView.separated(
                                     padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                            ListTile(
-                                              contentPadding: EdgeInsets.zero,
-                                              onTap: () async {
-                                                if (isExpanded) {
-                                                  provider.collapseOrder();
-                                                } else {
-                                                  await provider.expandOrder(order.id);
-                                                }
-                                              },
-                                              title: Wrap(
-                                                crossAxisAlignment: WrapCrossAlignment.center,
-                                                spacing: 8,
-                                                runSpacing: 4,
-                                                children: [
-                                                  Text(
-                                                    'Order #${order.id}',
-                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                                  ),
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                    decoration: BoxDecoration(
-                                                      color: _statusColor(order.status),
-                                                      borderRadius: BorderRadius.circular(4),
+                                    itemCount: provider.orders.length,
+                                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                                    itemBuilder: (context, index) {
+                                      final order = provider.orders[index];
+                                      final isExpanded = provider.expandedOrderId == order.id;
+                                      final fullOrder = isExpanded ? provider.expandedOrder : null;
+                                      final canEdit = _canStaffEditStatus(order.status);
+
+                                      return Card(
+                                        elevation: 2,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              ListTile(
+                                                contentPadding: EdgeInsets.zero,
+                                                onTap: () async {
+                                                  if (isExpanded) {
+                                                    provider.collapseOrder();
+                                                  } else {
+                                                    await provider.expandOrder(order.id);
+                                                  }
+                                                },
+                                                title: Wrap(
+                                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                                  spacing: 8,
+                                                  runSpacing: 4,
+                                                  children: [
+                                                    Text(
+                                                      'Order #${order.id}',
+                                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                                     ),
-                                                    child: Text(
-                                                      _statusOptions[order.status] ?? 'UNKNOWN',
-                                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                                    ),
-                                                  ),
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                    decoration: BoxDecoration(
-                                                      color: _paymentStatusColor(order.paymentStatus).withValues(alpha: 0.1),
-                                                      borderRadius: BorderRadius.circular(4),
-                                                      border: Border.all(color: _paymentStatusColor(order.paymentStatus)),
-                                                    ),
-                                                    child: Text(
-                                                      _paymentStatusText(order.paymentStatus),
-                                                      style: TextStyle(
-                                                        color: _paymentStatusColor(order.paymentStatus),
-                                                        fontSize: 10,
-                                                        fontWeight: FontWeight.bold,
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                      decoration: BoxDecoration(
+                                                        color: _statusColor(order.status),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        _statusOptions[order.status] ?? 'UNKNOWN',
+                                                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                                                       ),
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
-                                              subtitle: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  const SizedBox(height: 8),
-                                                  Text('Customer: ${order.customerName ?? "N/A"}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                                                  if (order.employeeName != null)
-                                                    Text('Employee: ${order.employeeName}', style: const TextStyle(fontSize: 13)),
-                                                  Text('Store: ${order.storeName ?? "N/A"}', style: const TextStyle(fontSize: 13)),
-                                                  if (order.promotionName != null)
-                                                    Text('Promotion: ${order.promotionName}', style: const TextStyle(fontSize: 13, color: Colors.green)),
-                                                  Text(order.createdAt ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                                  Text(
-                                                    'Total: ${CurrencyFormat.format(order.totalAmount)}',
-                                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-                                                  ),
-                                                ],
-                                              ),
-                                              trailing: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
-                                            ),
-                                            if (isExpanded && fullOrder != null) ...[
-                                              const Divider(height: 24),
-                                              const Text('Order Items', style: TextStyle(fontWeight: FontWeight.bold)),
-                                              const SizedBox(height: 8),
-                                              ...fullOrder.items.map(
-                                                (item) => Padding(
-                                                  padding: const EdgeInsets.only(bottom: 8),
-                                                  child: Row(
-                                                    children: [
-                                                      const Icon(Icons.shopping_bag, size: 16, color: Colors.grey),
-                                                      const SizedBox(width: 8),
-                                                      Expanded(
-                                                        child: Text(
-                                                          '${item.productName} x${item.quantity}',
-                                                          style: const TextStyle(fontSize: 13),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                      decoration: BoxDecoration(
+                                                        color: _paymentStatusColor(order.paymentStatus).withValues(alpha: 0.1),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                        border: Border.all(color: _paymentStatusColor(order.paymentStatus)),
+                                                      ),
+                                                      child: Text(
+                                                        _paymentStatusText(order.paymentStatus),
+                                                        style: TextStyle(
+                                                          color: _paymentStatusColor(order.paymentStatus),
+                                                          fontSize: 10,
+                                                          fontWeight: FontWeight.bold,
                                                         ),
                                                       ),
-                                                      Text(
-                                                        CurrencyFormat.format(item.subtotal),
-                                                        style: const TextStyle(fontWeight: FontWeight.w600),
-                                                      ),
-                                                    ],
+                                                    ),
+                                                  ],
+                                                ),
+                                                subtitle: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    const SizedBox(height: 8),
+                                                    Text('Customer: ${order.customerName ?? "N/A"}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                                    if (order.employeeName != null)
+                                                      Text('Employee: ${order.employeeName}', style: const TextStyle(fontSize: 13)),
+                                                    Text('Store: ${order.storeName ?? "N/A"}', style: const TextStyle(fontSize: 13)),
+                                                    if (order.promotionName != null)
+                                                      Text('Promotion: ${order.promotionName}', style: const TextStyle(fontSize: 13, color: Colors.green)),
+                                                    Text(order.createdAt ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                                    Text(
+                                                      'Total: ${CurrencyFormat.format(order.totalAmount)}',
+                                                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                                                    ),
+                                                  ],
+                                                ),
+                                                trailing: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+                                              ),
+                                              if (isExpanded && fullOrder != null) ...[
+                                                const Divider(height: 24),
+                                                const Text('Order Items', style: TextStyle(fontWeight: FontWeight.bold)),
+                                                const SizedBox(height: 8),
+                                                ...fullOrder.items.map(
+                                                  (item) => Padding(
+                                                    padding: const EdgeInsets.only(bottom: 8),
+                                                    child: Row(
+                                                      children: [
+                                                        const Icon(Icons.shopping_bag, size: 16, color: Colors.grey),
+                                                        const SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: Text(
+                                                            '${item.productName} x${item.quantity}',
+                                                            style: const TextStyle(fontSize: 13),
+                                                          ),
+                                                        ),
+                                                        Text(
+                                                          CurrencyFormat.format(item.subtotal),
+                                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                              const SizedBox(height: 12),
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: DropdownButtonFormField<int>(
-                                                      value: canEdit && _staffEditableTargets().contains(order.status) ? order.status : null,
-                                                      decoration: const InputDecoration(
-                                                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                                                        border: OutlineInputBorder(),
-                                                        labelText: 'Order Status',
-                                                      ),
-                                                      hint: Text(canEdit ? 'Select status' : 'Status locked'),
-                                                      items: _staffEditableTargets().map((s) {
-                                                        return DropdownMenuItem<int>(
-                                                          value: s,
-                                                          child: Text(_statusOptions[s] ?? 'UNKNOWN', style: const TextStyle(fontSize: 12)),
-                                                        );
-                                                      }).toList(),
-                                                      onChanged: !canEdit
-                                                          ? null
-                                                          : (newStatus) async {
-                                                              if (newStatus == null || newStatus == order.status) return;
-                                                              await _updateStatus(order, newStatus);
-                                                            },
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  if (order.paymentStatus == 1 && order.status == 5)
-                                                    Expanded(
-                                                      child: ElevatedButton.icon(
-                                                        style: ElevatedButton.styleFrom(
-                                                          backgroundColor: Colors.redAccent,
-                                                          foregroundColor: Colors.white,
-                                                          padding: const EdgeInsets.symmetric(vertical: 12),
-                                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                        ),
-                                                        icon: const Icon(Icons.keyboard_return, size: 16),
-                                                        label: const Text('Refund', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                                        onPressed: () async {
-                                                          final confirmed = await showDialog<bool>(
-                                                            context: context,
-                                                            builder: (ctx) => AlertDialog(
-                                                              title: const Text('Confirm Refund'),
-                                                              content: Text('Are you sure you want to refund Order #${order.id}? This will restore company funds and mark payment as REFUNDED.'),
-                                                              actions: [
-                                                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                                                                ElevatedButton(
-                                                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                                                  onPressed: () => Navigator.pop(ctx, true), 
-                                                                  child: const Text('Refund'),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          );
-                                                          if (confirmed == true && mounted) {
-                                                            await context.read<OrderProvider>().changePaymentStatus(order.id, 3);
-                                                            _fetch();
-                                                            _fetchStatusCounts();
-                                                          }
-                                                        },
-                                                      ),
-                                                    )
-                                                  else if (_staffPaymentEditableTargets(order.status, order.paymentStatus).isNotEmpty)
+                                                const SizedBox(height: 12),
+                                                Row(
+                                                  children: [
                                                     Expanded(
                                                       child: DropdownButtonFormField<int>(
+                                                        value: canEdit && _staffEditableTargets().contains(order.status) ? order.status : null,
                                                         decoration: const InputDecoration(
                                                           contentPadding: EdgeInsets.symmetric(horizontal: 8),
                                                           border: OutlineInputBorder(),
-                                                          labelText: 'Payment Status',
+                                                          labelText: 'Order Status',
                                                         ),
-                                                        items: _staffPaymentEditableTargets(order.status, order.paymentStatus).map((s) {
+                                                        hint: Text(canEdit ? 'Select status' : 'Status locked'),
+                                                        items: _staffEditableTargets().map((s) {
                                                           return DropdownMenuItem<int>(
                                                             value: s,
-                                                            child: Text(_paymentStatusText(s), style: const TextStyle(fontSize: 12)),
+                                                            child: Text(_statusOptions[s] ?? 'UNKNOWN', style: const TextStyle(fontSize: 12)),
                                                           );
                                                         }).toList(),
-                                                        onChanged: (newPayment) async {
-                                                          if (newPayment == null) return;
-                                                          await context.read<OrderProvider>().changePaymentStatus(order.id, newPayment);
-                                                          _fetch();
-                                                          _fetchStatusCounts();
-                                                        },
+                                                        onChanged: !canEdit
+                                                            ? null
+                                                            : (newStatus) async {
+                                                                if (newStatus == null || newStatus == order.status) return;
+                                                                await _updateStatus(order, newStatus);
+                                                              },
                                                       ),
                                                     ),
-                                                  IconButton(
-                                                    icon: const Icon(Icons.visibility_outlined, color: Colors.blue),
-                                                    onPressed: () => Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: order.id)),
-                                                    ).then((_) {
-                                                      _fetch();
-                                                      _fetchStatusCounts();
-                                                    }),
-                                                  ),
-                                                ],
-                                              ),
-                                              if (!canEdit)
-                                                const Padding(
-                                                  padding: EdgeInsets.only(top: 8),
-                                                  child: Text(
-                                                    'Management/Employee can only update 0-3 or ERROR (6).',
-                                                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                                                  ),
+                                                    const SizedBox(width: 8),
+                                                    if (order.paymentStatus == 1 && order.status == 5)
+                                                      Expanded(
+                                                        child: ElevatedButton.icon(
+                                                          style: ElevatedButton.styleFrom(
+                                                            backgroundColor: Colors.redAccent,
+                                                            foregroundColor: Colors.white,
+                                                            padding: const EdgeInsets.symmetric(vertical: 12),
+                                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                          ),
+                                                          icon: const Icon(Icons.keyboard_return, size: 16),
+                                                          label: const Text('Refund', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                                          onPressed: () async {
+                                                            final confirmed = await showDialog<bool>(
+                                                              context: context,
+                                                              builder: (ctx) => AlertDialog(
+                                                                title: const Text('Confirm Refund'),
+                                                                content: Text('Are you sure you want to refund Order #${order.id}? This will restore company funds and mark payment as REFUNDED.'),
+                                                                actions: [
+                                                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                                                  ElevatedButton(
+                                                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                                    onPressed: () => Navigator.pop(ctx, true), 
+                                                                    child: const Text('Refund'),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            );
+                                                            if (confirmed == true && mounted) {
+                                                              await context.read<OrderProvider>().changePaymentStatus(order.id, 3);
+                                                              _fetch();
+                                                              _fetchStatusCounts();
+                                                            }
+                                                          },
+                                                        ),
+                                                      )
+                                                    else if (_staffPaymentEditableTargets(order.status, order.paymentStatus).isNotEmpty)
+                                                      Expanded(
+                                                        child: DropdownButtonFormField<int>(
+                                                          decoration: const InputDecoration(
+                                                            contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                                                            border: OutlineInputBorder(),
+                                                            labelText: 'Payment Status',
+                                                          ),
+                                                          items: _staffPaymentEditableTargets(order.status, order.paymentStatus).map((s) {
+                                                            return DropdownMenuItem<int>(
+                                                              value: s,
+                                                              child: Text(_paymentStatusText(s), style: const TextStyle(fontSize: 12)),
+                                                            );
+                                                          }).toList(),
+                                                          onChanged: (newPayment) async {
+                                                            if (newPayment == null) return;
+                                                            await context.read<OrderProvider>().changePaymentStatus(order.id, newPayment);
+                                                            _fetch();
+                                                            _fetchStatusCounts();
+                                                          },
+                                                        ),
+                                                      ),
+                                                    IconButton(
+                                                      icon: const Icon(Icons.visibility_outlined, color: Colors.blue),
+                                                      onPressed: () => Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: order.id)),
+                                                      ).then((_) {
+                                                        _fetch();
+                                                        _fetchStatusCounts();
+                                                      }),
+                                                    ),
+                                                  ],
                                                 ),
+                                                if (!canEdit)
+                                                  const Padding(
+                                                    padding: EdgeInsets.only(top: 8),
+                                                    child: Text(
+                                                      'Management/Employee can only update 0-3 or ERROR (6).',
+                                                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                                                    ),
+                                                  ),
+                                              ],
                                             ],
-                                      ],
-                                    ),
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
-                                );
-                              },
-                            ),
-            ),
+                                ),
+                              ),
+                              if (provider.totalPages > 1)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      IconButton(
+                                        onPressed: provider.currentPage > 0 ? () => provider.previousPage() : null,
+                                        icon: const Icon(Icons.chevron_left),
+                                      ),
+                                      Text('Page ${provider.currentPage + 1} of ${provider.totalPages}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      IconButton(
+                                        onPressed: provider.currentPage < provider.totalPages - 1 ? () => provider.nextPage() : null,
+                                        icon: const Icon(Icons.chevron_right),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
           ),
         ],
       ),

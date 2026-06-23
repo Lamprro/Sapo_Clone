@@ -561,56 +561,76 @@ class _ProductListStaffScreenState extends State<ProductListStaffScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : provider.products.isEmpty
                     ? const Center(child: Text('No products found matching filters'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: provider.products.length,
-                        itemBuilder: (context, index) {
-                          final product = provider.products[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              leading: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: product.mainImage != null ? Image.network(product.mainImage!, width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.image)) : const Icon(Icons.image),
-                              ),
-                              title: Text(product.productName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(CurrencyFormat.format(product.sellPrice ?? 0)),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    product.status == 1 ? 'Active' : 'Inactive',
-                                    style: TextStyle(
-                                      color: product.status == 1 ? Colors.green : Colors.red,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              trailing: PopupMenuButton<String>(
-                                onSelected: (value) async {
-                                  if (value == 'edit') {
-                                    _navigateToForm(product: product);
-                                  } else if (value == 'toggle_status') {
-                                    try {
-                                      await _productService.changeProductStatus(product.id, product.status == 1 ? 0 : 1);
-                                      _triggerSearch();
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
-                                    }
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(value: 'edit', child: Text('Edit Product')),
-                                  PopupMenuItem(value: 'toggle_status', child: Text(product.status == 1 ? 'Deactivate' : 'Activate')),
-                                ],
-                              ),
-                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StaffProductDetailScreen(product: product))),
-                            ),
-                          );
+                    : NotificationListener<ScrollNotification>(
+                        onNotification: (ScrollNotification scrollInfo) {
+                          if (!provider.isLoadingMore &&
+                              provider.hasMore &&
+                              scrollInfo.metrics.pixels >=
+                                  scrollInfo.metrics.maxScrollExtent - 200) {
+                            provider.loadMore();
+                            return true;
+                          }
+                          return false;
                         },
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: provider.products.length + (provider.hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == provider.products.length) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
+                            final product = provider.products[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                leading: ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: product.mainImage != null ? Image.network(product.mainImage!, width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.image)) : const Icon(Icons.image),
+                                ),
+                                title: Text(product.productName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(CurrencyFormat.format(product.sellPrice ?? 0)),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      product.status == 1 ? 'Active' : 'Inactive',
+                                      style: TextStyle(
+                                        color: product.status == 1 ? Colors.green : Colors.red,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                trailing: PopupMenuButton<String>(
+                                  onSelected: (value) async {
+                                    if (value == 'edit') {
+                                      _navigateToForm(product: product);
+                                    } else if (value == 'toggle_status') {
+                                      try {
+                                        await _productService.changeProductStatus(product.id, product.status == 1 ? 0 : 1);
+                                        _triggerSearch();
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+                                      }
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(value: 'edit', child: Text('Edit Product')),
+                                    PopupMenuItem(value: 'toggle_status', child: Text(product.status == 1 ? 'Deactivate' : 'Activate')),
+                                  ],
+                                ),
+                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StaffProductDetailScreen(product: product))),
+                              ),
+                            );
+                          },
+                        ),
                       ),
           ),
         ],
