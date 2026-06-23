@@ -267,6 +267,7 @@ public class OrderServiceImpl implements OrderService {
                     .type(NotificationType.ORDER_NEW)
                     .targetRole("MANAGER") // Broad notification for Managers
                     .companyId(companyId)
+                    .orderId(savedOrder.getId())
                     .build());
         }
 
@@ -559,6 +560,7 @@ public class OrderServiceImpl implements OrderService {
                     .type(NotificationType.ORDER_STATUS_UPDATE)
                     .targetUserId(savedOrder.getCustomer().getId())
                     .companyId(companyId)
+                    .orderId(savedOrder.getId())
                     .build());
         }
 
@@ -574,6 +576,7 @@ public class OrderServiceImpl implements OrderService {
                     .type(NotificationType.ORDER_STATUS_UPDATE)
                     .targetRole("MANAGER")
                     .companyId(companyId)
+                    .orderId(savedOrder.getId())
                     .build());
                     
             // Notify EMPLOYEE
@@ -583,6 +586,7 @@ public class OrderServiceImpl implements OrderService {
                     .type(NotificationType.ORDER_STATUS_UPDATE)
                     .targetRole("EMPLOYEE")
                     .companyId(companyId)
+                    .orderId(savedOrder.getId())
                     .build());
         }
 

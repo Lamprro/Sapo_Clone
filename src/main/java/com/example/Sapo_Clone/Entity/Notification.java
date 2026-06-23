@@ -34,6 +34,8 @@ public class Notification {
 
     private Integer companyId;
 
+    private Integer orderId;
+
     private boolean isRead = false;
 
     private LocalDateTime createdAt;
