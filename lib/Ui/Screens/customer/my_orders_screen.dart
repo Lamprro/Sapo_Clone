@@ -210,177 +210,205 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     ))
                   : provider.orders.isEmpty
                       ? const Center(child: Text('No orders found.'))
-                      : ListView.builder(
-                          itemCount: provider.orders.length,
-                          itemBuilder: (context, index) {
-                            final order = provider.orders[index];
-                            final isExpanded = provider.expandedOrderId == order.id;
-                            final fullOrder = provider.expandedOrderId == order.id ? provider.expandedOrder : null;
+                      : Column(
+                          children: [
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: provider.orders.length,
+                                itemBuilder: (context, index) {
+                                  final order = provider.orders[index];
+                                  final isExpanded = provider.expandedOrderId == order.id;
+                                  final fullOrder = provider.expandedOrderId == order.id ? provider.expandedOrder : null;
 
-                            return Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              child: Column(
-                                children: [
-                                  // Order Header
-                                  ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    onTap: () async {
-                                      if (isExpanded) {
-                                        provider.collapseOrder();
-                                      } else {
-                                        await provider.expandOrder(order.id);
-                                        if (order.status >= 4) {
-                                          await context.read<RatingProvider>().loadUserRatings();
-                                        }
-                                      }
-                                    },
-                                    title: Wrap(
-                                      crossAxisAlignment: WrapCrossAlignment.center,
-                                      spacing: 8,
-                                      runSpacing: 4,
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    child: Column(
                                       children: [
-                                        Text(
-                                          'Order #${order.id}',
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                        ),
-                                        _buildStatusBadge(order.status),
-                                        _buildPaymentBadge(order.paymentStatus),
-                                      ],
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const SizedBox(height: 4),
-                                        if (order.storeName != null) 
-                                          Text('Store: ${order.storeName}', 
-                                            style: const TextStyle(fontSize: 11),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                        // Order Header
+                                        ListTile(
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          onTap: () async {
+                                            if (isExpanded) {
+                                              provider.collapseOrder();
+                                            } else {
+                                              await provider.expandOrder(order.id);
+                                              if (order.status >= 4) {
+                                                await context.read<RatingProvider>().loadUserRatings();
+                                              }
+                                            }
+                                          },
+                                          title: Wrap(
+                                            crossAxisAlignment: WrapCrossAlignment.center,
+                                            spacing: 8,
+                                            runSpacing: 4,
+                                            children: [
+                                              Text(
+                                                'Order #${order.id}',
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                              ),
+                                              _buildStatusBadge(order.status),
+                                              _buildPaymentBadge(order.paymentStatus),
+                                            ],
                                           ),
-                                        Text(order.createdAt ?? '', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                        Text(CurrencyFormat.format(order.totalAmount), style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                                      ],
-                                    ),
-                                    trailing: Icon(isExpanded ? Icons.expand_less : Icons.expand_more, size: 24),
-                                  ),
+                                          subtitle: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const SizedBox(height: 4),
+                                              if (order.storeName != null) 
+                                                Text('Store: ${order.storeName}', 
+                                                  style: const TextStyle(fontSize: 11),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              Text(order.createdAt ?? '', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                              Text(CurrencyFormat.format(order.totalAmount), style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                                            ],
+                                          ),
+                                          trailing: Icon(isExpanded ? Icons.expand_less : Icons.expand_more, size: 24),
+                                        ),
 
-                                  // Expanded Detail
-                                  if (isExpanded && fullOrder != null)
-                                    Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Divider(),
-                                          const Text('Purchased Items:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                          const SizedBox(height: 12),
-                                          for (var item in fullOrder.items)
-                                            _buildProductItemRow(context, item, fullOrder.status, ratingProvider, fullOrder.paymentStatus),
-                                          
-                                          const SizedBox(height: 16),
-                                          // Action buttons for DELIVERED (3)
-                                          if (fullOrder.status == 3) ...[
-                                            if (fullOrder.paymentStatus == 0)
-                                              Padding(
-                                                padding: const EdgeInsets.only(bottom: 12),
-                                                child: Container(
-                                                  padding: const EdgeInsets.all(12),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.orange.shade50,
-                                                    borderRadius: BorderRadius.circular(8),
-                                                    border: Border.all(color: Colors.orange.shade200),
-                                                  ),
-                                                  child: Row(
+                                        // Expanded Detail
+                                        if (isExpanded && fullOrder != null)
+                                          Padding(
+                                            padding: const EdgeInsets.all(16),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Divider(),
+                                                const Text('Purchased Items:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                                const SizedBox(height: 12),
+                                                for (var item in fullOrder.items)
+                                                  _buildProductItemRow(context, item, fullOrder.status, ratingProvider, fullOrder.paymentStatus),
+                                                
+                                                const SizedBox(height: 16),
+                                                // Action buttons for DELIVERED (3)
+                                                if (fullOrder.status == 3) ...[
+                                                  if (fullOrder.paymentStatus == 0)
+                                                    Padding(
+                                                      padding: const EdgeInsets.only(bottom: 12),
+                                                      child: Container(
+                                                        padding: const EdgeInsets.all(12),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.orange.shade50,
+                                                          borderRadius: BorderRadius.circular(8),
+                                                          border: Border.all(color: Colors.orange.shade200),
+                                                        ),
+                                                        child: Row(
+                                                          children: [
+                                                            const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+                                                            const SizedBox(width: 12),
+                                                            Expanded(
+                                                              child: Text(
+                                                                'Notice: This order has not been paid yet. Please complete your payment before confirming receipt.',
+                                                                style: TextStyle(
+                                                                  color: Colors.orange.shade900,
+                                                                  fontSize: 12,
+                                                                  fontWeight: FontWeight.w500,
+                                                                  fontStyle: FontStyle.italic,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  Row(
                                                     children: [
-                                                      const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
-                                                      const SizedBox(width: 12),
                                                       Expanded(
-                                                        child: Text(
-                                                          'Notice: This order has not been paid yet. Please complete your payment before confirming receipt.',
-                                                          style: TextStyle(
-                                                            color: Colors.orange.shade900,
-                                                            fontSize: 12,
-                                                            fontWeight: FontWeight.w500,
-                                                            fontStyle: FontStyle.italic,
-                                                          ),
+                                                        child: ElevatedButton(
+                                                          onPressed: () async {
+                                                            final success = await provider.changeOrderStatus(fullOrder.id, 4);
+                                                            if (success && mounted) {
+                                                              ErrorHandler.showSuccess(context, 'Order Received!');
+                                                              _fetchStatusCounts();
+                                                            }
+                                                          },
+                                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                                                          child: const Text('Received'),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: OutlinedButton(
+                                                          onPressed: () async {
+                                                            final success = await provider.changeOrderStatus(fullOrder.id, 5);
+                                                            if (success && mounted) {
+                                                              ErrorHandler.showSuccess(context, 'Cancellation requested.');
+                                                              _fetchStatusCounts();
+                                                            }
+                                                          },
+                                                          style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                                                          child: const Text('Return/Cancel'),
                                                         ),
                                                       ),
                                                     ],
                                                   ),
-                                                ),
-                                              ),
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: ElevatedButton(
-                                                    onPressed: () async {
-                                                      final success = await provider.changeOrderStatus(fullOrder.id, 4);
-                                                      if (success && mounted) {
-                                                        ErrorHandler.showSuccess(context, 'Order Received!');
-                                                        _fetchStatusCounts();
-                                                      }
-                                                    },
-                                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                                                    child: const Text('Received'),
+                                                ],
+                                                
+                                                // Allow cancellation for PENDING or CONFIRMED
+                                                if (fullOrder.status == 0 || fullOrder.status == 1)
+                                                  SizedBox(
+                                                    width: double.infinity,
+                                                    child: OutlinedButton(
+                                                      onPressed: () async {
+                                                        final success = await provider.changeOrderStatus(fullOrder.id, 5);
+                                                        if (success && mounted) {
+                                                          ErrorHandler.showSuccess(context, 'Order cancelled successfully.');
+                                                          _fetchStatusCounts();
+                                                        }
+                                                      },
+                                                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                                                      child: const Text('Cancel Order'),
+                                                    ),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: OutlinedButton(
-                                                    onPressed: () async {
-                                                      final success = await provider.changeOrderStatus(fullOrder.id, 5);
-                                                      if (success && mounted) {
-                                                        ErrorHandler.showSuccess(context, 'Cancellation requested.');
+
+                                                const SizedBox(height: 8),
+                                                Center(
+                                                  child: TextButton(
+                                                    onPressed: () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: fullOrder.id)),
+                                                      ).then((_) {
+                                                        _fetchOrders();
                                                         _fetchStatusCounts();
-                                                      }
+                                                      });
                                                     },
-                                                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                                                    child: const Text('Return/Cancel'),
+                                                    child: const Text('View Full Details'),
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                          ],
-                                          
-                                          // Allow cancellation for PENDING or CONFIRMED
-                                          if (fullOrder.status == 0 || fullOrder.status == 1)
-                                            SizedBox(
-                                              width: double.infinity,
-                                              child: OutlinedButton(
-                                                onPressed: () async {
-                                                  final success = await provider.changeOrderStatus(fullOrder.id, 5);
-                                                  if (success && mounted) {
-                                                    ErrorHandler.showSuccess(context, 'Order cancelled successfully.');
-                                                    _fetchStatusCounts();
-                                                  }
-                                                },
-                                                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                                                child: const Text('Cancel Order'),
-                                              ),
-                                            ),
-
-                                          const SizedBox(height: 8),
-                                          Center(
-                                            child: TextButton(
-                                              onPressed: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: fullOrder.id)),
-                                                ).then((_) {
-                                                  _fetchOrders();
-                                                  _fetchStatusCounts();
-                                                });
-                                              },
-                                              child: const Text('View Full Details'),
-                                            ),
                                           ),
-                                        ],
-                                      ),
+                                      ],
                                     ),
-                                ],
+                                  );
+                                },
                               ),
-                            );
-                          },
+                            ),
+                            if (provider.totalPages > 1)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    IconButton(
+                                      onPressed: provider.currentPage > 0 ? () => provider.previousPage() : null,
+                                      icon: const Icon(Icons.chevron_left),
+                                    ),
+                                    Text('Page ${provider.currentPage + 1} of ${provider.totalPages}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    IconButton(
+                                      onPressed: provider.currentPage < provider.totalPages - 1 ? () => provider.nextPage() : null,
+                                      icon: const Icon(Icons.chevron_right),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
         ),
       ],
