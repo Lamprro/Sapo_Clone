@@ -159,26 +159,30 @@ class _PromotionManagementScreenState extends State<PromotionManagementScreen> {
                 }(),
               ),
               if (provider.totalPages > 1)
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                  ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      ElevatedButton(
+                      IconButton(
                         onPressed: provider.currentPage > 0
                             ? () => provider.previousPage(companyId: _companyId)
                             : null,
-                        child: const Text('Previous'),
+                        icon: const Icon(Icons.chevron_left),
                       ),
-                      const SizedBox(width: 16),
                       Text(
-                          'Page ${provider.currentPage + 1} of ${provider.totalPages}'),
-                      const SizedBox(width: 16),
-                      ElevatedButton(
+                        'Page ${provider.currentPage + 1} of ${provider.totalPages}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
                         onPressed: provider.currentPage < provider.totalPages - 1
                             ? () => provider.nextPage(companyId: _companyId)
                             : null,
-                        child: const Text('Next'),
+                        icon: const Icon(Icons.chevron_right),
                       ),
                     ],
                   ),

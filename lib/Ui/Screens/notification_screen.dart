@@ -32,7 +32,7 @@ class _NotificationScreenState extends State<NotificationScreen> with SingleTick
     super.dispose();
   }
 
-  IconData _iconForType(String type) {
+  IconData _iconForType(String type, String title) {
     switch (type) {
       case 'ORDER_NEW':
         return Icons.shopping_cart;
@@ -43,13 +43,16 @@ class _NotificationScreenState extends State<NotificationScreen> with SingleTick
       case 'PAYMENT':
         return Icons.payment;
       case 'ADMIN_ALERT':
+        if (title.toLowerCase().contains('success')) {
+          return Icons.check_circle_outline_rounded;
+        }
         return Icons.warning_amber_rounded;
       default:
         return Icons.notifications;
     }
   }
 
-  Color _colorForType(String type) {
+  Color _colorForType(String type, String title) {
     switch (type) {
       case 'ORDER_NEW':
         return Colors.green;
@@ -60,6 +63,9 @@ class _NotificationScreenState extends State<NotificationScreen> with SingleTick
       case 'PAYMENT':
         return Colors.purple;
       case 'ADMIN_ALERT':
+        if (title.toLowerCase().contains('success')) {
+          return Colors.green;
+        }
         return Colors.red;
       default:
         return Colors.blueGrey;
@@ -236,12 +242,12 @@ class _NotificationScreenState extends State<NotificationScreen> with SingleTick
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: _colorForType(notification.type).withOpacity(0.1),
+                        color: _colorForType(notification.type, notification.title).withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        _iconForType(notification.type),
-                        color: _colorForType(notification.type),
+                        _iconForType(notification.type, notification.title),
+                        color: _colorForType(notification.type, notification.title),
                         size: 24,
                       ),
                     ),
@@ -373,12 +379,12 @@ class _NotificationScreenState extends State<NotificationScreen> with SingleTick
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: _colorForType(notification.type).withAlpha(30),
+                      color: _colorForType(notification.type, notification.title).withAlpha(30),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      _iconForType(notification.type),
-                      color: _colorForType(notification.type),
+                      _iconForType(notification.type, notification.title),
+                      color: _colorForType(notification.type, notification.title),
                       size: 22,
                     ),
                   ),
