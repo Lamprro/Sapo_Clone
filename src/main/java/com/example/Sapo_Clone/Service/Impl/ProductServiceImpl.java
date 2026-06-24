@@ -61,6 +61,7 @@ public class ProductServiceImpl implements ProductService {
     private final com.example.Sapo_Clone.Service.CloudService cloudService;
     private final com.example.Sapo_Clone.Service.NotificationService notificationService;
     private final com.example.Sapo_Clone.Repository.ProductImageRepository productImageRepository;
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
     @Override
     @Transactional
@@ -380,7 +381,6 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Async("imageUploadExecutor")
-    @Transactional
     public void importProductsAsync(byte[] fileBytes, int userId, int companyId, int storeId, String role) {
         log.info("Starting asynchronous product import from Excel. userId={}, companyId={}, storeId={}", userId, companyId, storeId);
         
@@ -399,6 +399,8 @@ public class ProductServiceImpl implements ProductService {
             sendImportNotification(userId, companyId, role, false, "Failed to initialize temp directory: " + e.getMessage());
             return;
         }
+
+        List<ParsedProduct> parsedProducts = new ArrayList<>();
 
         try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(fileBytes))) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -458,9 +460,6 @@ public class ProductServiceImpl implements ProductService {
             if (sellPriceColIdx == -1) throw new IllegalArgumentException("Missing 'Sell Price' column in Excel.");
             if (unitColIdx == -1) throw new IllegalArgumentException("Missing 'Unit' column in Excel.");
 
-            Company company = companyRepository.findById(companyId)
-                    .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
-
             // Parse each row
             for (int r = 1; r <= sheet.getLastRowNum(); r++) {
                 Row row = sheet.getRow(r);
@@ -515,31 +514,18 @@ public class ProductServiceImpl implements ProductService {
                 if (unitName.isEmpty()) {
                     throw new IllegalArgumentException("Row " + (r + 1) + ": Unit cannot be blank.");
                 }
-                Unit unit = unitRepository.findByUnitName(unitName)
-                        .orElseGet(() -> {
-                            Unit newUnit = new Unit();
-                            newUnit.setUnitName(unitName);
-                            newUnit.setDescription("Imported from Excel");
-                            return unitRepository.save(newUnit);
-                        });
 
                 // Categories
-                List<Category> categories = new ArrayList<>();
+                List<String> categoryNames = new ArrayList<>();
                 if (categoryColIdx != -1) {
                     String catsStr = getCellStringValue(row.getCell(categoryColIdx));
                     if (!catsStr.isEmpty()) {
                         String[] catNames = catsStr.split("[,;]");
                         for (String catName : catNames) {
                             String trimmedCatName = catName.trim();
-                            if (trimmedCatName.isEmpty()) continue;
-                            Category category = categoryRepository.findByCategoryName(trimmedCatName)
-                                    .orElseGet(() -> {
-                                        Category newCat = new Category();
-                                        newCat.setCategoryName(trimmedCatName);
-                                        newCat.setDescription("Imported from Excel");
-                                        return categoryRepository.save(newCat);
-                                    });
-                            categories.add(category);
+                            if (!trimmedCatName.isEmpty()) {
+                                categoryNames.add(trimmedCatName);
+                            }
                         }
                     }
                 }
@@ -556,40 +542,24 @@ public class ProductServiceImpl implements ProductService {
                     }
                 }
 
-                // Build Product
-                Product product = new Product();
-                product.setProductName(productName);
-                product.setDescription(description);
-                product.setBarcode(barcode);
-                product.setImportPrice(importPrice);
-                product.setSellPriceOriginal(sellPriceOriginal);
-                product.setSellPrice(sellPrice);
-                product.setUnit(unit);
-                product.setCategoryList(categories);
-                product.setStatus(1); // ACTIVE
-                product.setAvgstar(0.0);
-                product.setCompany(company);
+                ParsedProduct pp = new ParsedProduct();
+                pp.productName = productName;
+                pp.barcode = barcode;
+                pp.importPrice = importPrice;
+                pp.sellPriceOriginal = sellPriceOriginal;
+                pp.sellPrice = sellPrice;
+                pp.unitName = unitName;
+                pp.categoryNames = categoryNames;
+                pp.description = description;
+                pp.imageUrls = imageUrls;
+                parsedProducts.add(pp);
+            }
 
-                // Save product first so we have the ID
-                Product savedProduct = productRepository.save(product);
-
-                // Initialize inventory
-                List<Store> stores = storeRepository.findByCompanyId(companyId);
-                if (stores != null) {
-                    for (Store store : stores) {
-                        Inventory inventory = new Inventory();
-                        inventory.setProduct(savedProduct);
-                        inventory.setStore(store);
-                        inventory.setQuantity(0);
-                        inventoryRepository.save(inventory);
-                    }
-                }
-
-                // Handle downloading and uploading images
-                List<ProductImage> productImagesList = new ArrayList<>();
-                for (int i = 0; i < imageUrls.size(); i++) {
-                    String imageUrl = imageUrls.get(i);
-                    String tempFilename = "prod_" + savedProduct.getId() + "_" + i + "_" + UUID.randomUUID().toString().substring(0, 8) + ".jpg";
+            // Step 2: Download and upload images (OUTSIDE Database Transaction)
+            for (ParsedProduct pp : parsedProducts) {
+                for (int i = 0; i < pp.imageUrls.size(); i++) {
+                    String imageUrl = pp.imageUrls.get(i);
+                    String tempFilename = "prod_" + pp.barcode + "_" + i + "_" + UUID.randomUUID().toString().substring(0, 8) + ".jpg";
                     Path tempFile = tempDir.resolve(tempFilename);
                     
                     log.info("Downloading image from URL: {} to {}", imageUrl, tempFile.toAbsolutePath());
@@ -601,14 +571,7 @@ public class ProductServiceImpl implements ProductService {
                         byte[] imgBytes = Files.readAllBytes(tempFile);
                         var cloudResponse = cloudService.uploadToCloud(imgBytes, tempFilename);
                         uploadedCloudinaryPublicIds.add(cloudResponse.getPublicId());
-
-                        ProductImage img = new ProductImage();
-                        img.setImageUrl(cloudResponse.getImageUrl());
-                        img.setPublicId(cloudResponse.getPublicId());
-                        img.setStatus(i == 0 ? 2 : 1); // 2 is main, 1 is regular
-                        img.setProduct(savedProduct);
-                        productImageRepository.save(img);
-                        productImagesList.add(img);
+                        pp.uploadedImages.add(cloudResponse);
 
                         // Clean up downloaded temp file immediately
                         Files.deleteIfExists(tempFile);
@@ -618,8 +581,80 @@ public class ProductServiceImpl implements ProductService {
                         throw new RuntimeException("Failed to download/upload image from URL '" + imageUrl + "': " + imgEx.getMessage());
                     }
                 }
-                savedProduct.setProductImages(productImagesList);
             }
+
+            // Step 3: Run Database writes in a single, short-lived transactional block
+            transactionTemplate.execute(status -> {
+                Company company = companyRepository.findById(companyId)
+                        .orElseThrow(() -> new AppException(ErrorCode.COMPANY_NOT_FOUND));
+
+                for (ParsedProduct pp : parsedProducts) {
+                    // Resolve/Create Unit
+                    Unit unit = unitRepository.findByUnitName(pp.unitName)
+                            .orElseGet(() -> {
+                                Unit newUnit = new Unit();
+                                newUnit.setUnitName(pp.unitName);
+                                newUnit.setDescription("Imported from Excel");
+                                return unitRepository.save(newUnit);
+                            });
+
+                    // Resolve/Create Categories
+                    List<Category> categories = new ArrayList<>();
+                    for (String catName : pp.categoryNames) {
+                        Category category = categoryRepository.findByCategoryName(catName)
+                                .orElseGet(() -> {
+                                    Category newCat = new Category();
+                                    newCat.setCategoryName(catName);
+                                    newCat.setDescription("Imported from Excel");
+                                    return categoryRepository.save(newCat);
+                                });
+                        categories.add(category);
+                    }
+
+                    // Save Product
+                    Product product = new Product();
+                    product.setProductName(pp.productName);
+                    product.setDescription(pp.description);
+                    product.setBarcode(pp.barcode);
+                    product.setImportPrice(pp.importPrice);
+                    product.setSellPriceOriginal(pp.sellPriceOriginal);
+                    product.setSellPrice(pp.sellPrice);
+                    product.setUnit(unit);
+                    product.setCategoryList(categories);
+                    product.setStatus(1); // ACTIVE
+                    product.setAvgstar(0.0);
+                    product.setCompany(company);
+
+                    Product savedProduct = productRepository.save(product);
+
+                    // Initialize inventory
+                    List<Store> stores = storeRepository.findByCompanyId(companyId);
+                    if (stores != null) {
+                        for (Store store : stores) {
+                            Inventory inventory = new Inventory();
+                            inventory.setProduct(savedProduct);
+                            inventory.setStore(store);
+                            inventory.setQuantity(0);
+                            inventoryRepository.save(inventory);
+                        }
+                    }
+
+                    // Save images
+                    List<ProductImage> productImagesList = new ArrayList<>();
+                    for (int i = 0; i < pp.uploadedImages.size(); i++) {
+                        com.example.Sapo_Clone.DTO.Response.Cloud.CloudResponse cloudRes = pp.uploadedImages.get(i);
+                        ProductImage img = new ProductImage();
+                        img.setImageUrl(cloudRes.getImageUrl());
+                        img.setPublicId(cloudRes.getPublicId());
+                        img.setStatus(i == 0 ? 2 : 1);
+                        img.setProduct(savedProduct);
+                        productImageRepository.save(img);
+                        productImagesList.add(img);
+                    }
+                    savedProduct.setProductImages(productImagesList);
+                }
+                return null;
+            });
 
             clearProductListCaches();
             sendImportNotification(userId, companyId, role, true, "Import product success");
@@ -647,8 +682,21 @@ public class ProductServiceImpl implements ProductService {
             }
 
             sendImportNotification(userId, companyId, role, false, "Import product failed: " + e.getMessage());
-            throw new RuntimeException(e.getMessage(), e); // Throw exception to rollback transactional DB state
+            throw new RuntimeException(e.getMessage(), e); // Throw exception to notify executor
         }
+    }
+
+    private static class ParsedProduct {
+        String productName;
+        String description;
+        String barcode;
+        Double importPrice;
+        Double sellPriceOriginal;
+        Double sellPrice;
+        String unitName;
+        List<String> categoryNames = new ArrayList<>();
+        List<String> imageUrls = new ArrayList<>();
+        List<com.example.Sapo_Clone.DTO.Response.Cloud.CloudResponse> uploadedImages = new ArrayList<>();
     }
 
     private void downloadImage(String urlStr, Path targetPath) throws Exception {

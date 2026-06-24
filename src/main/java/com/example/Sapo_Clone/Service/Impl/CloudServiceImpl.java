@@ -51,15 +51,24 @@ public class CloudServiceImpl implements CloudService {
                 throw new AppException(ErrorCode.INVALID_IMAGE);
             }
 
-            Map<?, ?> uploadResult = cloudinary.uploader().upload(fileBytes,
-                    ObjectUtils.asMap(
-                            "resource_type", "auto",
-                            "folder", "sapo_clone/products"));
+            String ext = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                ext = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+            }
+
+            java.util.Map<String, Object> options = new java.util.HashMap<>();
+            options.put("resource_type", "image");
+            options.put("folder", "sapo_clone/products");
+            if (!ext.isEmpty()) {
+                options.put("format", ext);
+            }
+
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(fileBytes, options);
 
             String imageUrl = uploadResult.get("secure_url").toString();
             String publicId = uploadResult.get("public_id").toString();
 
-            log.info("Upload successful. Public ID: {}", publicId);
+            log.info("Upload successful. Public ID: {}, URL: {}", publicId, imageUrl);
             try {
                 if (cacheManager.getCache("product:list:manage") != null) cacheManager.getCache("product:list:manage").clear();
                 if (cacheManager.getCache("product:list:customer") != null) cacheManager.getCache("product:list:customer").clear();
