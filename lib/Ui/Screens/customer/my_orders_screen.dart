@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sapo_clone_app/Providers/order_provider.dart';
+import 'package:sapo_clone_app/Providers/notification_provider.dart';
 import 'package:sapo_clone_app/Providers/rating_provider.dart';
 import 'package:sapo_clone_app/models/rating.dart';
 import 'package:sapo_clone_app/utils/currency_format.dart';
@@ -25,6 +26,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   Timer? _searchDebounce;
   Map<int, int> _statusCounts = {};
   bool _fetchingCounts = false;
+  int _previousNotificationCount = 0;
+  VoidCallback? _notificationListener;
+  NotificationProvider? _notificationProvider;
 
   @override
   void initState() {
@@ -32,14 +36,44 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchOrders();
       _fetchStatusCounts();
+      _attachOrderNotificationRefresh();
     });
   }
 
   @override
   void dispose() {
+    if (_notificationListener != null) {
+      try {
+        _notificationProvider?.removeListener(_notificationListener!);
+      } catch (_) {}
+    }
     _searchCtrl.dispose();
     _searchDebounce?.cancel();
     super.dispose();
+  }
+
+  void _attachOrderNotificationRefresh() {
+    if (!mounted || _notificationListener != null) return;
+    final notificationProvider = context.read<NotificationProvider>();
+    _notificationProvider = notificationProvider;
+    _previousNotificationCount = notificationProvider.notifications.length;
+
+    _notificationListener = () {
+      if (!mounted) return;
+      final currentNotifications = notificationProvider.notifications;
+      if (currentNotifications.length > _previousNotificationCount) {
+        final newNotif = currentNotifications.first;
+        _previousNotificationCount = currentNotifications.length;
+        if (newNotif.type.contains('ORDER') || newNotif.type.contains('PAYMENT')) {
+          _fetchOrders();
+          _fetchStatusCounts();
+        }
+      } else {
+        _previousNotificationCount = currentNotifications.length;
+      }
+    };
+
+    notificationProvider.addListener(_notificationListener!);
   }
 
   Future<void> _fetchStatusCounts() async {

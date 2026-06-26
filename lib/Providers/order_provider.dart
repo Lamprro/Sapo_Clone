@@ -54,6 +54,19 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
+  Future<void> refreshCurrentOrders() async {
+    await fetchOrders(status: _lastStatus, keyword: _lastKeyword, page: _currentPage);
+    if (_expandedOrderId == null) return;
+
+    try {
+      _expandedOrder = await _service.getOrder(_expandedOrderId!);
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = "Error getting details: ${ErrorHandler.getErrorMessage(e)}";
+      notifyListeners();
+    }
+  }
+
   Future<OrderResponse> getOrder(int id) async {
     return await _service.getOrder(id);
   }
