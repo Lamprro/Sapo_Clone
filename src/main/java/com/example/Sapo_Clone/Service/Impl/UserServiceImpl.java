@@ -132,28 +132,43 @@ public class UserServiceImpl implements UserService {
         }
 
         Store store = null;
-        if (!"CUSTOMER".equals(targetRoleName)) {
-            Integer storeId = dto.getStoreId();
-            if (storeId == null || storeId == 0) {
-                // Fallback to manager's store if storeId is not provided
-                if ("MANAGER".equals(currentRole)) {
-                    User creator = userRepository.findById(SecurityUtils.getCurrentUserId()).orElse(null);
-                    if (creator != null && creator.getStore() != null) {
-                        storeId = creator.getStore().getId();
-                    }
-                }
-            }
-            if (storeId != null && storeId > 0) {
-                store = storeRepository.findById(storeId)
-                        .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
-            }
-        }
+        Integer storeId = dto.getStoreId();
 
         log.info("Hierarchy check: creatorRole={}, creatorCompanyId={} -> targetRole={}, targetCompanyId={}",
                 currentRole, currentCompanyId, targetRoleName, targetCompanyId);
 
         if (targetCompanyId <= 0) {
             throw new AppException(ErrorCode.COMPANY_NOT_FOUND);
+        }
+
+        if ("EMPLOYEE".equals(targetRoleName)) {
+            if ("MANAGER".equals(currentRole)) {
+                int currentStoreId = SecurityUtils.getCurrentStoreId();
+                if (currentStoreId > 0) {
+                    storeId = currentStoreId;
+                } else if (storeId == null || storeId <= 0) {
+                    User creator = userRepository.findById(SecurityUtils.getCurrentUserId()).orElse(null);
+                    if (creator != null && creator.getStore() != null) {
+                        storeId = creator.getStore().getId();
+                    }
+                }
+            }
+
+            if (storeId == null || storeId <= 0) {
+                throw new AppException(ErrorCode.STORE_REQUIRED);
+            }
+
+            store = storeRepository.findById(storeId)
+                    .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
+            if (store.getCompany() == null || store.getCompany().getId() != targetCompanyId) {
+                throw new AppException(ErrorCode.STORE_NOT_IN_COMPANY);
+            }
+        } else if (storeId != null && storeId > 0 && !"CUSTOMER".equals(targetRoleName)) {
+            store = storeRepository.findById(storeId)
+                    .orElseThrow(() -> new AppException(ErrorCode.STORE_NOT_FOUND));
+            if (store.getCompany() == null || store.getCompany().getId() != targetCompanyId) {
+                throw new AppException(ErrorCode.STORE_NOT_IN_COMPANY);
+            }
         }
 
         // 3. Duplicate checks within the target company
@@ -213,16 +228,21 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse updateStatus(int id, int status) {
         int companyId = SecurityUtils.getCurrentCompanyId();
-        log.info("Updating status user id={} to status={} companyId={}", id, status, companyId);
+        String currentRole = SecurityUtils.getCurrentRole();
+        log.info("Updating status user id={} to status={} companyId={} role={}", id, status, companyId, currentRole);
 
         if (status < 0 || status > 2) {
             throw new AppException(ErrorCode.INVALID_STATUS);
         }
 
+        if (!"ADMIN".equals(currentRole) && companyId <= 0) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        if (companyId != 0 && (user.getCompany() == null || user.getCompany().getId() != companyId)) {
+        if (!"ADMIN".equals(currentRole) && (user.getCompany() == null || user.getCompany().getId() != companyId)) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
         }
 
@@ -233,11 +253,17 @@ public class UserServiceImpl implements UserService {
     @Override
     public Page<UserResponse> getList(String keyword, int page, int size) {
         int companyId = SecurityUtils.getCurrentCompanyId();
-        log.info("Getting user list for companyId={}, keyword={}, page={}, size={}", companyId, keyword, page, size);
+        String currentRole = SecurityUtils.getCurrentRole();
+        int queryCompanyId = "ADMIN".equals(currentRole) ? 0 : companyId;
+        log.info("Getting user list for companyId={}, role={}, keyword={}, page={}, size={}", companyId, currentRole, keyword, page, size);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
+        if (!"ADMIN".equals(currentRole) && queryCompanyId <= 0) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
         if (keyword == null || keyword.trim().isEmpty()) {
-            return userRepository.findAllByCompanyId(companyId, pageable).map(UserResponse::fromEntity);
+            return userRepository.findAllByCompanyId(queryCompanyId, pageable).map(UserResponse::fromEntity);
         }
 
         String search = keyword.trim();
@@ -246,14 +272,14 @@ public class UserServiceImpl implements UserService {
             Optional<User> opt = userRepository.findById(id);
             List<UserResponse> singleResult = new ArrayList<>();
             opt.ifPresent(u -> {
-                if (u.getCompany() != null && (companyId == 0 || u.getCompany().getId() == companyId)) {
+                if (u.getCompany() != null && (queryCompanyId == 0 || u.getCompany().getId() == queryCompanyId)) {
                     singleResult.add(UserResponse.fromEntity(u));
                 }
             });
             return new PageImpl<>(singleResult, pageable, singleResult.size());
         }
 
-        return userRepository.searchByKeyword(companyId, search, pageable).map(UserResponse::fromEntity);
+        return userRepository.searchByKeyword(queryCompanyId, search, pageable).map(UserResponse::fromEntity);
     }
 
     @Override

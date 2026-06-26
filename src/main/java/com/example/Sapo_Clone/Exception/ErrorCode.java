@@ -18,6 +18,8 @@ public enum ErrorCode {
     ORDER_LOCKED(400, "Order cannot be modified in its current status"),
     INSUFFICIENT_POINTS(400, "Insufficient loyalty points"),
     INVALID_IMAGE(400, "Invalid image format or size"),
+    STORE_REQUIRED(400, "Store is required for employee accounts"),
+    STORE_NOT_IN_COMPANY(400, "Store does not belong to the selected company"),
 
     // 401 - Unauthorized
     INVALID_PASSWORD(401, "Incorrect password"),
