@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../../Providers/auth_provider.dart';
 import '../../../Providers/user_provider.dart';
 import '../../../models/auth.dart';
+import '../../../models/store.dart';
+import '../../../services/store_service.dart';
 import '../../../utils/error_handler.dart';
 
 class UserManagementScreen extends StatefulWidget {
@@ -44,6 +46,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       ),
       body: Consumer<UserProvider>(
         builder: (context, provider, _) {
+          final currentCompanyId = context.read<AuthProvider>().user?.companyId;
+          final visibleUsers = currentCompanyId == null
+              ? <UserResponse>[]
+              : provider.users.where((user) => user.companyId == currentCompanyId).toList();
+
           return Column(
             children: [
               // Search Header (Blue)
@@ -90,20 +97,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                 ),
 
-              if (provider.users.isEmpty && !provider.isLoading)
+              if (visibleUsers.isEmpty && !provider.isLoading)
                 const Expanded(
                   child: Center(
                     child: Text('No users found'),
                   ),
                 ),
 
-              if (provider.users.isNotEmpty)
+              if (visibleUsers.isNotEmpty)
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    itemCount: provider.users.length,
+                    itemCount: visibleUsers.length,
                     itemBuilder: (context, index) {
-                      final user = provider.users[index];
+                      final user = visibleUsers[index];
                       return UserCard(
                         user: user,
                         onStatusChange: () => _changeUserStatus(context, provider, user),
@@ -153,6 +160,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => UserFormSheet(
         currentRole: currentRole,
+        currentUser: auth.user,
         onSave: (
           fullName,
           phone,
@@ -527,6 +535,7 @@ class UserCard extends StatelessWidget {
 
 class UserFormSheet extends StatefulWidget {
   final String currentRole;
+  final UserResponse? currentUser;
   final Function(
     String fullName,
     String phone,
@@ -542,6 +551,7 @@ class UserFormSheet extends StatefulWidget {
   const UserFormSheet({
     super.key,
     required this.currentRole,
+    required this.currentUser,
     required this.onSave,
   });
 
@@ -559,7 +569,11 @@ class _UserFormSheetState extends State<UserFormSheet> {
   late TextEditingController _repeatPasswordController;
   late TextEditingController _addressController;
   int _selectedRole = 3; // Default: Employee
-  final int _selectedStore = 0;
+  int? _selectedStoreId;
+  final StoreService _storeService = StoreService();
+  List<StoreResponse> _stores = [];
+  bool _isLoadingStores = false;
+  String? _storeError;
   bool _obscurePassword = true;
 
   @override
@@ -580,6 +594,40 @@ class _UserFormSheetState extends State<UserFormSheet> {
       _selectedRole = 3; // Employee
     } else {
       _selectedRole = 4; // Customer
+    }
+
+    final lockedStoreId = widget.currentUser?.storeId;
+    if (lockedStoreId != null && lockedStoreId > 0) {
+      _selectedStoreId = lockedStoreId;
+    }
+    _loadStores();
+  }
+
+  bool get _requiresStore => _selectedRole == 3;
+
+  bool get _isStoreLocked {
+    final storeId = widget.currentUser?.storeId;
+    return _requiresStore && storeId != null && storeId > 0;
+  }
+
+  Future<void> _loadStores() async {
+    setState(() {
+      _isLoadingStores = true;
+      _storeError = null;
+    });
+    try {
+      final stores = await _storeService.getAllStores();
+      if (!mounted) return;
+      setState(() {
+        _stores = stores;
+        _isLoadingStores = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _storeError = ErrorHandler.getErrorMessage(e);
+        _isLoadingStores = false;
+      });
     }
   }
 
@@ -621,6 +669,71 @@ class _UserFormSheetState extends State<UserFormSheet> {
       items.add(const DropdownMenuItem(value: 4, child: Text('Customer')));
     }
     return items;
+  }
+
+  String _storeName(int? storeId) {
+    if (storeId == null || storeId <= 0) return 'No store selected';
+    for (final store in _stores) {
+      if (store.id == storeId) return store.storeName;
+    }
+    return 'Store #$storeId';
+  }
+
+  Widget _buildStoreSelector() {
+    final dropdownValue =
+        _selectedStoreId != null && _stores.any((store) => store.id == _selectedStoreId)
+            ? _selectedStoreId
+            : null;
+
+    if (_isStoreLocked) {
+      return InputDecorator(
+        decoration: _inputDecoration('Assigned Store', Icons.storefront_outlined).copyWith(
+          enabled: false,
+          helperText: 'Locked to manager store',
+        ),
+        child: Text(
+          _storeName(_selectedStoreId),
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      );
+    }
+
+    if (_isLoadingStores) {
+      return InputDecorator(
+        decoration: _inputDecoration('Assigned Store', Icons.storefront_outlined),
+        child: const Row(
+          children: [
+            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(width: 12),
+            Text('Loading stores...'),
+          ],
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<int>(
+      value: dropdownValue,
+      isExpanded: true,
+      decoration: _inputDecoration('Assigned Store', Icons.storefront_outlined).copyWith(
+        helperText: _storeError ?? 'Required for employee accounts',
+        errorMaxLines: 2,
+      ),
+      items: _stores.map((store) {
+        return DropdownMenuItem<int>(
+          value: store.id,
+          child: Text(store.storeName, overflow: TextOverflow.ellipsis),
+        );
+      }).toList(),
+      onChanged: (value) => setState(() => _selectedStoreId = value),
+      validator: (_) {
+        if (!_requiresStore) return null;
+        if (_stores.isEmpty) return 'No stores available for this company';
+        if (_selectedStoreId == null || _selectedStoreId == 0) {
+          return 'Store is required';
+        }
+        return null;
+      },
+    );
   }
 
   @override
@@ -726,9 +839,23 @@ class _UserFormSheetState extends State<UserFormSheet> {
                 decoration: _inputDecoration('User Role', Icons.badge_outlined),
                 items: _getRoleItems(),
                 onChanged: (value) {
-                  if (value != null) setState(() => _selectedRole = value);
+                  if (value != null) {
+                    setState(() {
+                      _selectedRole = value;
+                      final lockedStoreId = widget.currentUser?.storeId;
+                      if (_requiresStore && lockedStoreId != null && lockedStoreId > 0) {
+                        _selectedStoreId = lockedStoreId;
+                      } else if (!_requiresStore) {
+                        _selectedStoreId = null;
+                      }
+                    });
+                  }
                 },
               ),
+              if (_requiresStore) ...[
+                const SizedBox(height: 16),
+                _buildStoreSelector(),
+              ],
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () {
@@ -741,7 +868,7 @@ class _UserFormSheetState extends State<UserFormSheet> {
                       _passwordController.text,
                       _repeatPasswordController.text,
                       _selectedRole,
-                      _selectedStore,
+                      _requiresStore ? (_selectedStoreId ?? 0) : 0,
                       _addressController.text,
                     );
                   }

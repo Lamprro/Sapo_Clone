@@ -74,7 +74,7 @@ class _StaffShellState extends State<StaffShell> {
           // If the new notification is related to orders, refresh order provider
           if (newNotif.type.contains('ORDER') || newNotif.type.contains('PAYMENT')) {
             try {
-              Provider.of<OrderProvider>(context, listen: false).fetchOrders();
+              Provider.of<OrderProvider>(context, listen: false).refreshCurrentOrders();
             } catch (_) {}
           }
         } else {

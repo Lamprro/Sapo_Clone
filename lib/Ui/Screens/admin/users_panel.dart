@@ -96,6 +96,7 @@ class _UsersPanelState extends State<UsersPanel> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
           final filteredStores = _stores.where((s) => s.companyId == selectedCompanyId).toList();
+          final isEmployeeRole = selectedRoleId == 3;
           if (selectedStoreId != 0 && !filteredStores.any((s) => s.id == selectedStoreId)) {
             selectedStoreId = 0;
           }
@@ -217,18 +218,23 @@ class _UsersPanelState extends State<UsersPanel> {
                       // Dropdown for Store selection (hides if customer)
                       if (selectedRoleId != 4) ...[
                         DropdownButtonFormField<int>(
-                          value: selectedStoreId,
-                          decoration: const InputDecoration(
-                            labelText: 'Assign Store of Company',
-                            prefixIcon: Icon(Icons.store),
-                            border: OutlineInputBorder(),
+                          value: isEmployeeRole && selectedStoreId == 0 ? null : selectedStoreId,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: isEmployeeRole ? 'Assign Store *' : 'Assign Store of Company',
+                            prefixIcon: const Icon(Icons.store),
+                            border: const OutlineInputBorder(),
+                            helperText: isEmployeeRole
+                                ? 'Required for employee accounts'
+                                : 'Optional for manager accounts',
                           ),
                           items: [
-                            const DropdownMenuItem(value: 0, child: Text('Global Store / None')),
+                            if (!isEmployeeRole)
+                              const DropdownMenuItem(value: 0, child: Text('Global Store / None')),
                             ...filteredStores.map((s) {
                               return DropdownMenuItem(
                                 value: s.id,
-                                child: Text(s.storeName),
+                                child: Text(s.storeName, overflow: TextOverflow.ellipsis),
                               );
                             })
                           ],
@@ -236,6 +242,12 @@ class _UsersPanelState extends State<UsersPanel> {
                             if (val != null) {
                               setDialogState(() => selectedStoreId = val);
                             }
+                          },
+                          validator: (val) {
+                            if (!isEmployeeRole) return null;
+                            if (filteredStores.isEmpty) return 'No stores available for this company';
+                            if (val == null || val == 0) return 'Store is required';
+                            return null;
                           },
                         ),
                         const SizedBox(height: 24),
