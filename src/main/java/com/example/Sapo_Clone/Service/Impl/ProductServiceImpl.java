@@ -116,18 +116,6 @@ public class ProductServiceImpl implements ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-        // Initialize inventory with 0 quantity for all stores in the company
-        List<Store> stores = storeRepository.findByCompanyId(companyId);
-        if (stores != null) {
-            for (Store store : stores) {
-                Inventory inventory = new Inventory();
-                inventory.setProduct(savedProduct);
-                inventory.setStore(store);
-                inventory.setQuantity(0);
-                inventoryRepository.save(inventory);
-            }
-        }
-
         clearProductListCaches();
         return ProductResponse.fromEntity(savedProduct);
     }
@@ -626,18 +614,6 @@ public class ProductServiceImpl implements ProductService {
                     product.setCompany(company);
 
                     Product savedProduct = productRepository.save(product);
-
-                    // Initialize inventory
-                    List<Store> stores = storeRepository.findByCompanyId(companyId);
-                    if (stores != null) {
-                        for (Store store : stores) {
-                            Inventory inventory = new Inventory();
-                            inventory.setProduct(savedProduct);
-                            inventory.setStore(store);
-                            inventory.setQuantity(0);
-                            inventoryRepository.save(inventory);
-                        }
-                    }
 
                     // Save images
                     List<ProductImage> productImagesList = new ArrayList<>();
