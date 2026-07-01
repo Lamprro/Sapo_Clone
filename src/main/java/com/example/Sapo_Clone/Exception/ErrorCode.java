@@ -20,9 +20,9 @@ public enum ErrorCode {
     INVALID_IMAGE(400, "Invalid image format or size"),
     STORE_REQUIRED(400, "Store is required for employee accounts"),
     STORE_NOT_IN_COMPANY(400, "Store does not belong to the selected company"),
+    INVALID_PASSWORD(400, "Incorrect password"),
 
     // 401 - Unauthorized
-    INVALID_PASSWORD(401, "Incorrect password"),
     UNAUTHORIZED(401, "You are not logged in or session has expired"),
 
     // 403 - Forbidden
