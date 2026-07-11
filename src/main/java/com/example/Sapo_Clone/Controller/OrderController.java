@@ -18,8 +18,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/order")
@@ -82,11 +89,13 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Page<OrderListResponse>>> getList(
             @RequestParam(required = false, defaultValue = "-1") Integer status,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         log.info("API GET /api/order - search/list");
-        Page<OrderListResponse> response = orderService.getList(status, keyword, page, size);
+        Page<OrderListResponse> response = orderService.getList(status, keyword, startDate, endDate, page, size);
         return ResponseEntity.ok(ApiResponse.success("Success", response));
     }
 
@@ -120,5 +129,92 @@ public class OrderController {
         log.info("API GET /api/order/report");
         Map<String, Object> report = orderService.getFinancialReport(storeId, start, end);
         return ResponseEntity.ok(ApiResponse.success("Success", report));
+    }
+
+    // 8. CONVERT ORDER TO V2
+    @PostMapping("/{id}/convert-to-v2")
+    public ResponseEntity<ApiResponse<OrderResponse>> convertToV2(@PathVariable int id) {
+        log.info("API POST /api/order/{}/convert-to-v2", id);
+        OrderResponse response = orderService.convertToV2(id);
+        return ResponseEntity.ok(ApiResponse.success("Order converted to V2 successfully", response));
+    }
+
+    // 9. CONVERT ORDER V2 TO V1
+    @PostMapping("/v2/{id}/convert-to-v1")
+    public ResponseEntity<ApiResponse<OrderResponse>> convertToV1(@PathVariable int id) {
+        log.info("API POST /api/order/v2/{}/convert-to-v1", id);
+        OrderResponse response = orderService.convertToV1(id);
+        return ResponseEntity.ok(ApiResponse.success("Order converted to V1 successfully", response));
+    }
+
+    // 10. HARD DELETE ORDER
+    @DeleteMapping("/{id}/hard-delete")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteOrder(@PathVariable int id) {
+        log.info("API DELETE /api/order/{}/hard-delete", id);
+        orderService.hardDeleteOrder(id);
+        return ResponseEntity.ok(ApiResponse.success("Order hard deleted successfully", null));
+    }
+
+    // 11. COMBINED FINANCIAL REPORT
+    @GetMapping("/report/combined")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCombinedFinancialReport(
+            @RequestParam(required = false, defaultValue = "-1") int storeId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        log.info("API GET /api/order/report/combined");
+        Map<String, Object> report = orderService.getCombinedFinancialReport(storeId, start, end);
+        return ResponseEntity.ok(ApiResponse.success("Success", report));
+    }
+
+    // 12. MONTHLY STATISTICS
+    @GetMapping("/stats/monthly")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getMonthlyStats(
+            @RequestParam int year,
+            @RequestParam int month,
+            @RequestParam(required = false) Integer storeId) {
+        log.info("API GET /api/order/stats/monthly?year={}&month={}", year, month);
+        Map<String, Object> stats = orderService.getMonthlyStats(year, month, storeId);
+        return ResponseEntity.ok(ApiResponse.success("Success", stats));
+    }
+
+    // 13. DAILY ORDERS LIST
+    @GetMapping("/stats/daily-orders")
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getDailyOrders(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Integer storeId) {
+        log.info("API GET /api/order/stats/daily-orders?date={}", date);
+        List<OrderResponse> orders = orderService.getDailyOrders(date, storeId);
+        return ResponseEntity.ok(ApiResponse.success("Success", orders));
+    }
+
+    // 14. EXCEL REPORT GENERATION
+    @GetMapping("/report/export-excel")
+    public ResponseEntity<ApiResponse<String>> exportExcel(
+            @RequestParam int year,
+            @RequestParam int month) {
+        log.info("API GET /api/order/report/export-excel?year={}&month={}", year, month);
+        String filename = orderService.startExcelExport(year, month);
+        String downloadUrl = "/api/order/report/download/" + filename;
+        return ResponseEntity.ok(ApiResponse.success("Excel generation started. Download link: " + downloadUrl, downloadUrl));
+    }
+
+    // 15. DOWNLOAD EXCEL REPORT FILE
+    @GetMapping("/report/download/{filename:.+}")
+    public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
+        try {
+            Path file = Paths.get("exports").resolve(filename).normalize();
+            Resource resource = new UrlResource(file.toUri());
+            if (resource.exists() || resource.isReadable()) {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            log.error("Error downloading file: ", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

@@ -40,7 +40,7 @@ public class OrderListResponse {
                 .storeName(order.getStore() != null ? order.getStore().getStoreName() : null)
                 .status(order.getStatus())
                 .totalAmount(order.getTotalAmount())
-                .paymentMethod(order.getPaymentMethod())
+                .paymentMethod(order.getPaymentMethod() != null ? String.valueOf(order.getPaymentMethod().getId()) : null)
                 .paymentStatus(order.getPaymentStatus())
                 .createdAt(order.getCreatedAt())
                 .shippingAddress(order.getShippingAddress())

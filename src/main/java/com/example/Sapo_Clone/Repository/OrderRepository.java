@@ -19,6 +19,8 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                      "(:customerId IS NULL OR c.id = :customerId) AND " +
                      "(:storeId IS NULL OR o.store.id = :storeId) AND " +
                      "(:status IS NULL OR :status = -1 OR o.status = :status) AND " +
+                      "(:startDate IS NULL OR o.createdAt >= :startDate) AND " +
+                      "(:endDate IS NULL OR o.createdAt <= :endDate) AND " +
                      "(:keyword IS NULL OR :keyword = '' OR " +
                      "  LOWER(c.userFullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                      "  c.userEmail LIKE CONCAT('%', :keyword, '%') OR " +
@@ -28,6 +30,8 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                                    "(:customerId IS NULL OR c.id = :customerId) AND " +
                                    "(:storeId IS NULL OR o.store.id = :storeId) AND " +
                                    "(:status IS NULL OR :status = -1 OR o.status = :status) AND " +
+                      "(:startDate IS NULL OR o.createdAt >= :startDate) AND " +
+                      "(:endDate IS NULL OR o.createdAt <= :endDate) AND " +
                                    "(:keyword IS NULL OR :keyword = '' OR " +
                                    "  LOWER(c.userFullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                                    "  c.userEmail LIKE CONCAT('%', :keyword, '%') OR " +
@@ -38,7 +42,7 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                      @Param("storeId") Integer storeId,
                      @Param("status") Integer status,
                      @Param("keyword") String keyword,
-                     Pageable pageable);
+                     @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, Pageable pageable);
 
        @Query("SELECT SUM(o.totalAmount) FROM Order o WHERE o.store.company.id = :companyId " +
                      "AND (:storeId IS NULL OR o.store.id = :storeId) " +

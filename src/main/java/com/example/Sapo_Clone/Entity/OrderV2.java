@@ -1,24 +1,19 @@
 package com.example.Sapo_Clone.Entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "orders") // Changed to "orders" because "order" is a reserved keyword in SQL
+@Table(name = "orders_v2")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Order {
+public class OrderV2 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     int id;
@@ -58,18 +53,18 @@ public class Order {
     @ToString.Exclude
     @ManyToOne
     @JoinColumn(name = "customer_id", nullable = false)
-    User customer; // User placing the order
+    User customer;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @ManyToOne
-    @JoinColumn(name = "employee_id") // Can be null if order is placed online by customer
-    User employee; // Employee who processed the order (if placed in store)
+    @JoinColumn(name = "employee_id")
+    User employee;
 
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @ManyToOne
-    @JoinColumn(name = "store_id", nullable = false) // An order must belong to a store
+    @JoinColumn(name = "store_id", nullable = false)
     Store store;
 
     @EqualsAndHashCode.Exclude
@@ -81,7 +76,7 @@ public class Order {
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    List<OrderDetail> orderDetails;
+    List<OrderDetailV2> orderDetails;
 
     @PrePersist
     public void onCreate() {

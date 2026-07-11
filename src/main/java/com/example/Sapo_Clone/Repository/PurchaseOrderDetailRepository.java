@@ -13,6 +13,13 @@ import java.util.List;
 public interface PurchaseOrderDetailRepository extends JpaRepository<PurchaseOrderDetail, Integer> {
     List<PurchaseOrderDetail> findByPurchaseOrderId(int purchaseOrderId);
 
+    @Query("SELECT pod FROM PurchaseOrderDetail pod " +
+           "WHERE pod.purchaseOrder.store.id = :storeId " +
+           "AND pod.product.id = :productId " +
+           "AND pod.purchaseOrder.status = 1 " +
+           "ORDER BY pod.purchaseOrder.createdAt DESC")
+    List<PurchaseOrderDetail> findCompletedDetails(@Param("storeId") int storeId, @Param("productId") int productId);
+
     @Modifying
     @Query("DELETE FROM PurchaseOrderDetail pod WHERE pod.purchaseOrder.user.id = :userId")
     int deleteByPurchaseOrderUserId(@Param("userId") int userId);
