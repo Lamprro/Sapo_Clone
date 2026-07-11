@@ -16,8 +16,8 @@ public class OrderItemResponse {
     public static OrderItemResponse fromEntity(OrderDetail detail) {
         if (detail == null) return null;
         return OrderItemResponse.builder()
-                .productId(detail.getProduct().getId())
-                .productName(detail.getProduct().getProductName())
+                .productId(detail.getProduct() != null ? detail.getProduct().getId() : null)
+                .productName(detail.getProduct() != null ? detail.getProduct().getProductName() : "Sản phẩm đã bị xóa")
                 .quantity(detail.getQuantity())
                 .price(detail.getPrice())
                 .subtotal(detail.getSubtotal())

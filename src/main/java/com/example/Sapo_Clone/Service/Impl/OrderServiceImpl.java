@@ -1056,7 +1056,7 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime finalEnd = end;
         LocalDateTime finalStart = start;
         List<OrderResponse> list1 = detailedOrders1.getContent().stream()
-                .filter(o -> o.getCreatedAt().isAfter(finalStart) && o.getCreatedAt().isBefore(finalEnd))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(finalStart) && o.getCreatedAt().isBefore(finalEnd))
                 .map(OrderResponse::fromEntity)
                 .collect(Collectors.toList());
 
@@ -1065,7 +1065,7 @@ public class OrderServiceImpl implements OrderService {
                 companyId, null, targetStoreId, 4, null, PageRequest.of(0, 5000)
         );
         List<OrderResponse> list2 = detailedOrders2.getContent().stream()
-                .filter(o -> o.getCreatedAt().isAfter(finalStart) && o.getCreatedAt().isBefore(finalEnd))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(finalStart) && o.getCreatedAt().isBefore(finalEnd))
                 .map(this::mapV2ToResponse)
                 .collect(Collectors.toList());
 
@@ -1110,10 +1110,11 @@ public class OrderServiceImpl implements OrderService {
                 companyId, null, storeId, 4, null, start, end, PageRequest.of(0, 10000)
         );
         List<Order> monthlyOrders = ordersPage.getContent().stream()
-                .filter(o -> o.getCreatedAt().isAfter(start) && o.getCreatedAt().isBefore(end))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(start) && o.getCreatedAt().isBefore(end))
                 .collect(Collectors.toList());
 
         for (Order o : monthlyOrders) {
+            if (o.getCreatedAt() == null) continue;
             int day = o.getCreatedAt().getDayOfMonth();
             dailyTotals.put(day, dailyTotals.getOrDefault(day, 0.0) + o.getTotalAmount());
         }
@@ -1139,7 +1140,7 @@ public class OrderServiceImpl implements OrderService {
                 companyId, null, storeId, null, null, start, end, PageRequest.of(0, 5000)
         );
         return ordersPage.getContent().stream()
-                .filter(o -> o.getCreatedAt().isAfter(start) && o.getCreatedAt().isBefore(end))
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(start) && o.getCreatedAt().isBefore(end))
                 .map(OrderResponse::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -1180,6 +1181,7 @@ public class OrderServiceImpl implements OrderService {
         double[] dailyBanking = new double[daysInMonth + 1];
 
         for (Order o : monthlyOrders) {
+            if (o.getCreatedAt() == null) continue;
             int day = o.getCreatedAt().getDayOfMonth();
             int pmId = o.getPaymentMethod() != null ? o.getPaymentMethod().getId() : 0;
             if (pmId == 0) {
@@ -1243,7 +1245,7 @@ public class OrderServiceImpl implements OrderService {
                 r.createCell(1).setCellValue(o.getCustomer() != null ? o.getCustomer().getUserFullName() : "N/A");
                 r.createCell(2).setCellValue(o.getEmployee() != null ? o.getEmployee().getUserFullName() : "N/A");
                 r.createCell(3).setCellValue(o.getStore() != null ? o.getStore().getStoreName() : "N/A");
-                r.createCell(4).setCellValue(o.getCreatedAt().toString());
+                r.createCell(4).setCellValue(o.getCreatedAt() != null ? o.getCreatedAt().toString() : "N/A");
                 r.createCell(5).setCellValue(o.getPaymentMethod() != null ? o.getPaymentMethod().getName() : "Money");
                 r.createCell(6).setCellValue(o.getStatus());
                 r.createCell(7).setCellValue(o.getTotalAmount());
@@ -1266,8 +1268,8 @@ public class OrderServiceImpl implements OrderService {
         if (o.getOrderDetails() != null) {
             for (OrderDetailV2 od : o.getOrderDetails()) {
                 items.add(com.example.Sapo_Clone.DTO.Response.Order.OrderItemResponse.builder()
-                        .productId(od.getProduct().getId())
-                        .productName(od.getProduct().getProductName())
+                        .productId(od.getProduct() != null ? od.getProduct().getId() : null)
+                        .productName(od.getProduct() != null ? od.getProduct().getProductName() : "Sản phẩm đã bị xóa")
                         .quantity(od.getQuantity())
                         .price(od.getPrice())
                         .subtotal(od.getSubtotal())
